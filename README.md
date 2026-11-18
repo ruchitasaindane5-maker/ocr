@@ -154,6 +154,13 @@ nahi karna padega.
 `app.py` (FastAPI) aur `cli.py` abhi bhi repo mein hain aur wahi
 database file use karte hain, lekin **main server ab Node + Prisma hai**.
 
+### ☁️ AWS par deploy karna hai?
+Poori step-by-step guide dekho: **[AWS_DEPLOY.md](AWS_DEPLOY.md)**
+(Docker image ready hai — `Dockerfile` + `docker-compose.yml` +
+`/api/health` health check. EC2 par `docker compose up -d --build`
+se poora product chal jayega; wahan Ollama skip hokar cloud AI
+chain chalti hai.)
+
 ---
 
 ## 🗄️ Prisma Models (prisma/schema.prisma)

@@ -45,6 +45,13 @@ const upload = multer({
   limits: { fileSize: 100 * 1024 * 1024, files: 20 }, // 100 MB/file, max 20 files
 });
 
+// Health check — AWS ALB / EC2 / Docker ke liye (halka, DB count ke saath)
+app.get("/api/health", ah(async (_req, res) => {
+  const docs = (await store.dbStats()).docs;
+  res.json({ ok: true, docs, uptime_s: Math.round(process.uptime()) });
+}));
+app.get("/healthz", (_req, res) => res.json({ ok: true }));
+
 app.get("/api/status", ah(async (_req, res) => {
   const stats = await store.dbStats();
   const sizeKb = ["", "-wal", "-shm"].reduce((sum, suf) => {
