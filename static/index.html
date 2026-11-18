@@ -7,9 +7,14 @@
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📄</text></svg>">
 <style>
   :root{
+    color-scheme:dark;
     --bg:#0b101d; --bg2:#0f1626; --card:#151f36; --card2:#1b2947; --line:#26365e;
     --txt:#e9edf6; --mut:#97a5c0; --acc:#5b8cff; --acc2:#7c5cff; --ok:#34d399; --warn:#fbbf24; --err:#f87171;
     --r:14px; --sh:0 8px 28px rgba(0,0,0,.35);
+  }
+  ::selection{background:rgba(91,140,255,.45)}
+  @media (prefers-reduced-motion: reduce){
+    *,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important}
   }
   *{box-sizing:border-box}
   html{scrollbar-color:#2c3f6e transparent}
@@ -135,6 +140,26 @@
     background:#0d1526;border:1px solid var(--line);border-radius:10px;padding:12px}
   .dlgBtns{display:flex;gap:8px;justify-content:flex-end;margin-top:12px;flex-wrap:wrap}
   .hint{font-size:12.5px;color:var(--mut);line-height:1.6}
+
+  /* Chat empty-state: naye user ke liye 3 steps */
+  .steps{display:flex;flex-direction:column;gap:8px;max-width:88%;align-self:flex-start;width:100%}
+  .step{display:flex;gap:11px;align-items:flex-start;background:rgba(91,140,255,.05);
+    border:1px dashed var(--line);border-radius:12px;padding:10px 13px;font-size:13.5px;color:var(--mut);line-height:1.55}
+  .step .n{flex:none;width:24px;height:24px;border-radius:99px;display:grid;place-items:center;
+    background:linear-gradient(135deg,var(--acc),var(--acc2));color:#fff;font-weight:700;font-size:13px}
+  .step b{color:var(--txt)}
+
+  /* Chat: neeche jaane wala floating button */
+  #scrollDown{position:absolute;right:20px;bottom:128px;z-index:6;border-radius:99px;
+    padding:8px 14px;font-size:12.5px;box-shadow:var(--sh);opacity:0;pointer-events:none;transform:translateY(6px)}
+  #scrollDown.show{opacity:1;pointer-events:auto;transform:none}
+  #askHint{margin-top:7px;font-size:11.5px;color:#6d7c9c}
+  @media(max-width:640px){ #q{font-size:16px} } /* iOS par focus-zoom rokne ke liye */
+  @media(max-width:900px){ #chatCard{position:relative} } /* floating button ka anchor */
+
+  /* Doc card: download wali dusri halki row */
+  .doc .exp{display:flex;gap:6px;align-items:center;margin-top:7px;flex-wrap:wrap}
+  .doc .exp span{font-size:11.5px;color:var(--mut);margin-right:1px}
 </style>
 </head>
 <body>
@@ -210,9 +235,11 @@
     <div id="msgs" aria-live="polite"></div>
     <div class="chips" id="chips"></div>
     <div id="askrow">
-      <textarea id="q" rows="1" placeholder="Apna sawaal likho… (Enter = bhejo, Shift+Enter = nayi line)" aria-label="Sawaal"></textarea>
+      <textarea id="q" rows="1" placeholder="Apna sawaal likho…" aria-label="Sawaal"></textarea>
       <button id="askBtn">Bhejo ➤</button>
     </div>
+    <div id="askHint">Enter = bhejo · Shift+Enter = nayi line · Jawab hamesha page number ke saath aata hai</div>
+    <button id="scrollDown" class="ghost" title="Sabse naye jawab par jao">⬇ Neeche</button>
   </section>
 </main>
 
@@ -304,11 +331,13 @@ function docCard(d){
     ${d.tables_found?` · 📊 ${fmtN(d.tables_found)} tables`:''}${d.ocr_pages?` · 🔍 ${fmtN(d.ocr_pages)} OCR pages`:''}<br>🕐 ${esc(fmtDate(d.created_at))}</div>
     <div class="row">
       <button class="ghost mini" data-act="view">📖 Data dekho</button>
-      <button class="ghost mini" data-act="txt">⬇ TXT</button>
-      <button class="ghost mini" data-act="csv">⬇ CSV</button>
-      <button class="ghost mini" data-act="json">⬇ JSON</button>
       <button class="ghost mini" data-act="ask" title="Sirf isi PDF mein sawaal dhundho">💬 Isi se puchho</button>
-      <button class="danger mini" data-act="del" style="margin-left:auto">🗑</button>
+      <button class="danger mini" data-act="del" style="margin-left:auto" title="PDF delete karo">🗑</button>
+    </div>
+    <div class="exp"><span>⬇ Download:</span>
+      <button class="ghost mini" data-act="txt">TXT</button>
+      <button class="ghost mini" data-act="csv">CSV</button>
+      <button class="ghost mini" data-act="json">JSON</button>
     </div>`;
   el.querySelector('.nm span').textContent=d.name; // naam text ki tarah — script kabhi nahi banega
   el.querySelectorAll('button').forEach(b=>b.onclick=()=>docAction(d,b.dataset.act,el));
@@ -345,6 +374,7 @@ $('#closeTextBtn').onclick=()=>$('#textDlg').close();
 async function refreshDocs(){
   try{ docsCache=await api('/api/docs'); }catch{ docsCache=[]; }
   renderDocs();
+  if(!chatDirty) welcome(); // welcome sandesh PDF ki ginti ke hisaab se
 }
 function renderDocs(){
   const q=($('#docSearch').value||'').toLowerCase();
@@ -408,10 +438,24 @@ function bubble(text,who){
   const el=document.createElement('div'); el.className='msg '+who; el.textContent=text;
   msgs.appendChild(el); scrollChat(); return el;
 }
+let chatDirty=false; // user ne pehla sawaal puchha ya nahi
 function welcome(){
   msgs.innerHTML='';
-  const el=bubble('Namaste! 👋 Pehle upar se PDF upload karo, phir yahan sawaal puchho.\nJawab PDF ke pages se milega — page number ke saath, taaki tum khud check kar sako.','bot');
-  el.insertAdjacentHTML('beforeend','<div class="mode">💡 Neeche diye example sawaal par click karke try karo</div>');
+  const n=docsCache.length;
+  if(!n){
+    bubble('Namaste! 👋 Pehle upar se PDF upload karo, phir yahan sawaal puchho.\nJawab PDF ke pages se milega — page number ke saath, taaki tum khud check kar sako.','bot');
+    const steps=document.createElement('div');
+    steps.className='steps';
+    steps.innerHTML=
+      '<div class="step"><span class="n">1</span><div><b>PDF upload karo</b> — upar wale box mein file drag karo ya click karke choose karo</div></div>'+
+      '<div class="step"><span class="n">2</span><div><b>Database mein save hoga</b> — text/OCR se pages apne aap bankar ready ho jayenge</div></div>'+
+      '<div class="step"><span class="n">3</span><div><b>Yahan sawaal puchho</b> — jawab page number ke saath milega, sources kholkar khud check kar sakte ho</div></div>';
+    msgs.appendChild(steps);
+  }else{
+    const el=bubble(`Namaste! 👋 ${fmtN(n)} PDF database mein ready ${n===1?'hai':'hain'}.\nApna sawaal neeche likho — jawab PDF ke pages se milega, page number ke saath.`,'bot');
+    el.insertAdjacentHTML('beforeend','<div class="mode">💡 Neeche diye example sawaal par click karke try karo</div>');
+  }
+  scrollChat();
 }
 function renderChips(){
   const box=$('#chips'); box.innerHTML='';
@@ -422,13 +466,14 @@ function renderChips(){
     box.appendChild(c);
   });
 }
-$('#clearChat').onclick=()=>{ welcome(); $('#q').focus(); };
+$('#clearChat').onclick=()=>{ chatDirty=false; welcome(); $('#q').focus(); };
 
 let msgSeq=0; const answerStore=new Map();
 async function ask(){
   const inp=$('#q'), q=inp.value.trim();
   if(!q) return;
   if(!docsCache.length){ toast('Pehle ek PDF upload karo 👆','err'); document.getElementById('drop').scrollIntoView({behavior:'smooth',block:'center'}); return; }
+  chatDirty=true; msgs.querySelector('.steps')?.remove();
   bubble(q,'user'); inp.value=''; inp.style.height='auto';
   const btn=$('#askBtn'); btn.disabled=true; btn.textContent='…';
   const typing=document.createElement('div'); typing.className='msg bot';
@@ -467,6 +512,12 @@ async function ask(){
   }
 }
 $('#askBtn').onclick=ask;
+const sdBtn=$('#scrollDown');
+msgs.addEventListener('scroll',()=>{
+  const gap=msgs.scrollHeight-msgs.scrollTop-msgs.clientHeight;
+  sdBtn.classList.toggle('show',gap>240);
+});
+sdBtn.onclick=()=>msgs.scrollTo({top:msgs.scrollHeight,behavior:'smooth'});
 const qBox=$('#q');
 qBox.addEventListener('keydown',e=>{ if(e.key==='Enter'&&!e.shiftKey){ e.preventDefault(); ask(); } });
 qBox.addEventListener('input',()=>{ qBox.style.height='auto'; qBox.style.height=Math.min(qBox.scrollHeight,110)+'px'; });
