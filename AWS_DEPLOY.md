@@ -73,12 +73,50 @@ curl http://localhost:8000/api/health
 # {"ok":true,"docs":0,...} aaye to server perfect hai
 ```
 
-## Step 5 — Baad ke kaam (jab man kare)
+## Step 5 — Auto-Deploy: GitHub push = website khud update 🤖
 
-**Code update karna ho to:**
+Ek baar setting kar do, phir server par haath lagana hi nahi padega:
+apne computer par code badlo → `git push` → 2–4 minute mein live
+website update. Iske liye workflow file **project mein pehle se bani
+hui hai**: `.github/workflows/deploy.yml` (GitHub Actions).
+
+**Kaise kaam karta hai:** master par push → GitHub ka runner SSH se
+EC2 mein ghusta hai → server par `git pull` + `docker compose up -d
+--build` → `/api/health` check. Fail ho to Actions tab mein laal
+nishaan dikhega. `.env` aur `data/` server par hi rahte hain — deploy
+unhe haath nahi lagata, isliye keys/data har baar safe.
+
+**Ek baar ki setting (GitHub par):**
+
+1. Repo → **Settings → Secrets and variables → Actions →
+   New repository secret**, teen secret banao:
+
+   | Secret | Value |
+   |---|---|
+   | `EC2_HOST` | Server ka public IP (jaise `13.234.xx.xx`) |
+   | `EC2_USER` | `ubuntu` |
+   | `EC2_SSH_KEY` | Tumhari `.pem` file ka **poora text** (`-----BEGIN ...-----` se `-----END ...-----` tak copy-paste) |
+
+2. Bas! Ab `git push origin master` karo aur repo ke **Actions** tab
+   mein "Deploy to AWS EC2" chalta hua dekho. Haath se chalana ho to
+   wahi se **Run workflow** button bhi hai.
+
+**Dhyaan do:**
+- Sirf `master` branch ka push live hoga — experiments dusri branch
+  par karo, master mein tabhi merge karo jab sure ho.
+- Server par pehli baar Step 1–4 (Docker + clone + `.env`) haath se
+  karna padega; auto-deploy uske baad se hai.
+- Repo private ho to server par `git clone` ke liye GitHub deploy key
+  lagegi (Settings → Deploy keys) — public repo mein seedha chalega.
+
+**Code update karna ho to (ab yahi tareeka hai):**
 ```bash
-cd ocr_pdf && git pull && docker compose up -d --build
+# apne computer par — server par kuch nahi karna!
+git add . && git commit -m "mera badlav" && git push origin master
 ```
+
+Haath wala purana tareeka (emergency ke liye): server par
+`cd ocr_pdf && git pull && docker compose up -d --build`
 
 **Database ka backup (zaroori aadat):**
 ```bash
@@ -104,6 +142,7 @@ cp data/pdf_qa.db ~/pdf_qa_backup_$(date +%F).db
 | Dikkat | Check karo |
 |---|---|
 | Website nahi khul rahi | Security group mein 8000 khula hai? `docker compose ps` mein container `up` hai? |
+| Auto-deploy fail (Actions laal) | Secrets sahi hain? (`EC2_HOST` IP, `EC2_USER` = ubuntu, `EC2_SSH_KEY` poori .pem file) · Server chalu hai? · Server par folder `~/ocr_pdf` hi hai? |
 | Container baar-baar restart | `docker compose logs` dekho — aksar `.env` ki galti hoti hai |
 | Upload par Python error | `docker compose logs` mein worker error padho; image dobara build: `docker compose build --no-cache` |
 | Jawab slow hai | EC2 par Ollama nahi chal raha (normal hai) — cloud AI jawab dega; OCR badi PDF par 1–2 min normal hai |
