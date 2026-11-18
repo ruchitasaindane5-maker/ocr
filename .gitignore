@@ -10,4 +10,5 @@ server/generated/
 brag-output/work/
 brag-output/brag.mp4
 brag-output/aws-deploy.mp4
+brag-output/full-setup-deploy.mp4
 tests/failures/
