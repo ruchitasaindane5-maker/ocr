@@ -30,7 +30,7 @@ export function getProviders(): Provider[] {
       name: "Ollama (Local PC)",
       keyEnvs: [],
       baseUrl: env("OLLAMA_HOST") || "http://localhost:11434",
-      // 24GB RAM + 6GB GPU ke liye best: ~4.7GB, GPU+RAM hybrid, Hindi achhi
+      // 16GB RAM + 6GB GPU ke liye best: ~4.7GB, zyada hissa GPU par, Hindi achhi
       model: env("OLLAMA_MODEL") || "qwen2.5:7b",
       freeNote: "Bilkul free, bina internet/key — ollama pull " + (env("OLLAMA_MODEL") || "qwen2.5:7b"),
     },

@@ -61,8 +61,8 @@ npm run db:studio
 
 ### Step 5 (A) — Ollama local lagao (sabse best — sirf tumhare PC ke liye)
 
-Tumhara PC: **24 GB RAM + 6 GB graphics card** — iske liye perfect
-model hai **`qwen2.5:7b`** (~4.7 GB download):
+Tumhara laptop: **16 GB RAM + 6 GB graphics card** — iske liye
+perfect model hai **`qwen2.5:7b`** (~4.7 GB download):
 
 1. https://ollama.com se Ollama install karo (Windows app tray mein chalti rehti hai)
 2. Terminal mein model download karo:
@@ -72,16 +72,19 @@ model hai **`qwen2.5:7b`** (~4.7 GB download):
 3. Bas — server start karne par Ollama **apne aap chain mein pehle
    number par** use hoga. Koi key nahi, koi internet nahi, koi paisa nahi.
 
-Kyun yahi model tumhare liye best hai:
-- 6 GB VRAM mein model ka bada hissa GPU par rahega, baaki 24 GB RAM
-  sambhal legi → jawab fast (lagbhag 3–8 sec)
+Kyun yahi model tumhare (16 GB RAM) laptop ke liye best hai:
+- Model ~4.7 GB ka hai — bada hissa 6 GB VRAM (graphics card) mein
+  rahega, isliye 16 GB RAM par bhi aaram se chalega aur jawab fast
+  aayega (lagbhag 4–10 sec)
 - Hindi/Hinglish Qwen par sabse achhi hai (tumhari PDFs mixed hain)
 - Code mein context `num_ctx 8192` set hai, taaki lambe PDF passages
   naa katein
-- Chaho to `qwen2.5:14b` bhi chalega (RAM kaafi hai), lekin 6 GB VRAM
-  mein pura fit nahi hoga isliye aadha CPU par chalega — jawab behtar
-  lekin slow (~15–30 sec). `.env` mein `OLLAMA_MODEL=qwen2.5:14b`
-  likh kar badal sakte ho.
+- ⚠️ `qwen2.5:14b` 16 GB RAM par mat lagana — 9 GB ka model RAM
+  bhar dega, laptop slow/hang ho sakta hai. 7B hi sahi rahega.
+- Agar phir bhi slow lage (jaise saath mein Chrome ke bahut tabs
+  khule hon), to `.env` mein `OLLAMA_MODEL=qwen2.5:3b` kar do —
+  halka model hai, jawab thode simple lekin tez aayenge. Model
+  chalate waqt bhaari apps band rakhna to speed best rahegi.
 
 ### Step 5 (B) — Free AI keys lagao (optional, backup ke liye)
 `.env.example` ko `.env` naam se copy karo aur teeno keys bharo
