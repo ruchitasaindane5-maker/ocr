@@ -1,0 +1,67 @@
+// ============================================================
+//  PDF OCR Q&A — Prisma ORM Schema (SQLite, bina AI)
+//  Models: Document -> Page, Chunk (search ke hisse)
+//  chunks_fts (FTS5 virtual table) Prisma model nahi hai — wo
+//  server boot par raw SQL se banti hai (prisma/schema bhi yahi
+//  tables banata hai `npx prisma db push` se).
+// ============================================================
+
+generator client {
+  provider = "prisma-client"
+  output   = "../server/generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+/// Ek upload ki gayi PDF
+model Document {
+  id          String  @id // sha256 ka pehla 12 char
+  name        String
+  sha256      String  @unique
+  fileSize    Int     @default(0) @map("file_size")
+  pageCount   Int     @default(0) @map("page_count")
+  totalChars  Int     @default(0) @map("total_chars")
+  ocrEngine   String? @map("ocr_engine")
+  ocrPages    Int     @default(0) @map("ocr_pages")
+  tablesFound Int     @default(0) @map("tables_found")
+  metadata    String  @default("{}") // JSON string (PDF metadata)
+  storedFile  String? @map("stored_file")
+  createdAt   String  @map("created_at") // ISO string
+
+  pages  Page[]
+  chunks Chunk[]
+
+  @@map("documents")
+}
+
+/// Ek page ka extracted text (method: text | ocr:<engine> | text+ocr:<engine>)
+model Page {
+  id        Int      @id @default(autoincrement())
+  docId     String   @map("doc_id")
+  pageNo    Int      @map("page_no")
+  method    String   @default("text")
+  text      String   @default("")
+  charCount Int      @default(0) @map("char_count")
+
+  document Document @relation(fields: [docId], references: [id], onDelete: Cascade)
+
+  @@unique([docId, pageNo])
+  @@index([docId])
+  @@map("pages")
+}
+
+/// Search ke liye kata hua text ka hissa (isi par FTS5/BM25 + TF-IDF chalta hai)
+model Chunk {
+  id     Int    @id @default(autoincrement())
+  docId  String @map("doc_id")
+  pageNo Int    @map("page_no")
+  method String @default("text")
+  text   String
+
+  document Document @relation(fields: [docId], references: [id], onDelete: Cascade)
+
+  @@index([docId])
+  @@map("chunks")
+}

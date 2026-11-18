@@ -63,7 +63,7 @@
     </section>
 
     <section class="card" style="margin-top:16px">
-      <h2>🗄️ Database (SQLite)</h2>
+      <h2>🗄️ Database (Prisma ORM · SQLite)</h2>
       <table class="db">
         <tr><td>File</td><td>data/pdf_qa.db</td></tr>
         <tr><td>PDFs saved</td><td id="dbDocs">–</td></tr>
@@ -110,7 +110,7 @@ async function refreshStatus(){
   const s=await (await fetch('/api/status')).json();
   $('#ocrBadge').innerHTML=`OCR engine: <b>${s.ocr_engine||'nahi mila (sirf text layer)'}</b>`;
   const d=s.database;
-  $('#dbBadge').innerHTML=`🗄️ SQLite: <b>${d.docs} PDFs · ${d.pages} pages · ${d.chunks} chunks</b>`;
+  $('#dbBadge').innerHTML=`🗄️ Prisma ORM · SQLite: <b>${d.docs} PDFs · ${d.pages} pages · ${d.chunks} chunks</b>`;
   $('#dbDocs').textContent=d.docs; $('#dbPages').textContent=d.pages;
   $('#dbChunks').textContent=d.chunks; $('#dbSize').textContent=d.db_size_kb+' KB';
 }
