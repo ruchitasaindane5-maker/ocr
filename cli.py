@@ -1,38 +1,47 @@
-"""Command-line istemal (bina browser ke).
+"""Command-line istemal (bina browser, bina AI).
 
-    python cli.py add "file1.pdf" "file2.pdf" [--ocr auto|always|never]
-    python cli.py list
-    python cli.py ask "WhatsApp agent banane ke liye kya kya chahiye?"
+    python cli.py add "file1.pdf" ["file2.pdf"] [--ocr auto|always|never]
+    python cli.py list                 # database mein saved PDFs
+    python cli.py status               # database ki jaankari
+    python cli.py ask "UPI QR kaise banta hai?"
+    python cli.py text <doc_id>        # extracted text dekho
+    python cli.py export <doc_id> --format txt|csv|json
     python cli.py remove <doc_id>
-    python cli.py text <doc_id>          # extracted text dekho
 """
 from __future__ import annotations
 
 import argparse
+import csv
+import io
+import json
 import os
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-from pdf_ocr_qa.answer import answer_question, llm_status  # noqa: E402
+from pdf_ocr_qa.answer import answer_question  # noqa: E402
 from pdf_ocr_qa.extract import extract_pdf  # noqa: E402
 from pdf_ocr_qa.store import Store  # noqa: E402
 
 
 def main():
-    ap = argparse.ArgumentParser(description="PDF OCR + Q&A (CLI)")
+    ap = argparse.ArgumentParser(description="PDF OCR + Database Q&A (No AI)")
     sub = ap.add_subparsers(dest="cmd", required=True)
-    p_add = sub.add_parser("add", help="PDF add/process karo")
+    p_add = sub.add_parser("add", help="PDF process karke database mein save karo")
     p_add.add_argument("files", nargs="+")
     p_add.add_argument("--ocr", choices=["auto", "always", "never"], default="auto")
-    sub.add_parser("list", help="Add ki gayi PDFs dekho")
-    p_ask = sub.add_parser("ask", help="Sawaal puchho")
+    sub.add_parser("list")
+    sub.add_parser("status")
+    p_ask = sub.add_parser("ask")
     p_ask.add_argument("question")
-    p_ask.add_argument("--doc", default=None, help="sirf is doc_id mein dhundho")
+    p_ask.add_argument("--doc", default=None)
     p_rm = sub.add_parser("remove")
     p_rm.add_argument("doc_id")
-    p_tx = sub.add_parser("text", help="Extracted text print karo")
+    p_tx = sub.add_parser("text")
     p_tx.add_argument("doc_id")
+    p_ex = sub.add_parser("export")
+    p_ex.add_argument("doc_id")
+    p_ex.add_argument("--format", choices=["txt", "csv", "json"], default="txt")
     args = ap.parse_args()
     store = Store()
 
@@ -41,34 +50,55 @@ def main():
             print(f"Processing: {path} ...")
             with open(path, "rb") as f:
                 data = f.read()
-            info = store.add_document(
-                os.path.basename(path), data,
-                extract_pdf(path, ocr_mode=args.ocr))
-            print(f"  OK -> id={info['id']} pages={info['pages']} "
+            info = store.add_document(os.path.basename(path), data,
+                                      extract_pdf(path, ocr_mode=args.ocr))
+            print(f"  SAVED IN DB -> id={info['id']} pages={info['pages']} "
                   f"chars={info['chars']} chunks={info['chunks']} "
-                  f"ocr_pages={info['ocr_pages']} engine={info['ocr_engine']}")
+                  f"tables={info['tables_found']} ocr_pages={info['ocr_pages']}")
     elif args.cmd == "list":
         docs = store.list_docs()
         if not docs:
-            print("Koi PDF add nahi hai. Pehle: python cli.py add file.pdf")
+            print("Database khali hai. Pehle: python cli.py add file.pdf")
         for d in docs:
-            print(f"{d['id']}  {d['name']}  pages={d['pages']} "
-                  f"chunks={d['chunks']} chars={d['chars']}")
-        print("LLM:", llm_status())
+            print(f"{d['id']}  {d['name']}  pages={d['pages']} chunks={d['chunks']} "
+                  f"chars={d['chars']} added={d['created_at']}")
+    elif args.cmd == "status":
+        print(json.dumps(store.stats(), indent=1, ensure_ascii=False))
     elif args.cmd == "ask":
         out = answer_question(store, args.question, doc_id=args.doc)
-        print("\n" + out["answer"] + "\n")
-        print(f"[mode: {out['mode']}"
-              + (f" / {out['provider']}" if out.get("provider") else "") + "]")
+        print("\n" + out["answer"] + "\n\n[mode: database-search, koi AI nahi]")
     elif args.cmd == "remove":
         print("deleted" if store.delete(args.doc_id) else "not found")
     elif args.cmd == "text":
-        d = store.docs.get(args.doc_id)
+        d = store.get_document(args.doc_id)
         if not d:
             print("doc not found")
             return
         for p in d["pages"]:
             print(f"\n===== {d['name']} - page {p['page']} [{p['method']}] =====\n{p['text']}")
+    elif args.cmd == "export":
+        d = store.get_document(args.doc_id)
+        if not d:
+            print("doc not found")
+            return
+        base = os.path.splitext(d["name"])[0]
+        out_path = f"{base}_extracted.{args.format}"
+        if args.format == "json":
+            payload = {**d, "chunks": store.all_chunks(args.doc_id)}
+            open(out_path, "w", encoding="utf-8").write(
+                json.dumps(payload, ensure_ascii=False, indent=1))
+        elif args.format == "csv":
+            buf = io.StringIO()
+            w = csv.writer(buf)
+            w.writerow(["document", "page", "method", "chars", "text"])
+            for p in d["pages"]:
+                w.writerow([d["name"], p["page"], p["method"], len(p["text"]), p["text"]])
+            open(out_path, "w", encoding="utf-8", newline="").write(buf.getvalue())
+        else:
+            open(out_path, "w", encoding="utf-8").write("\n".join(
+                f"\n===== Page {p['page']} [{p['method']}] =====\n{p['text']}"
+                for p in d["pages"]))
+        print(f"Exported -> {out_path}")
 
 
 if __name__ == "__main__":
