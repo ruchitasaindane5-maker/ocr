@@ -9,3 +9,5 @@ __pycache__
 *.pdf
 !static/
 .DS_Store
+brag-output/*.mp4
+brag-output/work/

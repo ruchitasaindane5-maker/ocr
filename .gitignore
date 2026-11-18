@@ -6,9 +6,10 @@ data/
 node_modules/
 server/generated/
 
-# Video/guide banane ke beech wale files (screenshots, audio, render)
+# Ignore video intermediates and unreviewed exports; keep the three workshop deliverables.
 brag-output/work/
-brag-output/brag.mp4
-brag-output/aws-deploy.mp4
-brag-output/full-setup-deploy.mp4
+brag-output/*.mp4
+!brag-output/brag.mp4
+!brag-output/code-flow-deep-dive.mp4
+!brag-output/full-setup-deploy.mp4
 tests/failures/

@@ -27,6 +27,8 @@ Browser ─► Node/Express server ─► Python worker (PDF + OCR: PyMuPDF)
 
 ## ▶️ Chalane ka tareeka (step-by-step)
 
+**Hinglish videos:** [Setup, code-flow deep dive aur AWS deploy](brag-output/video-guide.md) — MP4 downloads, chapter timestamps aur copy-paste commands.
+
 ### Pehle ye dono install hone chahiye
 - **Node.js 20.19+** — https://nodejs.org
 - **Python 3.10+** — https://python.org (Windows par install ke time
