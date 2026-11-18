@@ -59,7 +59,30 @@ Database dekhna ho to Prisma Studio:
 npm run db:studio
 ```
 
-### Step 5 — Server chalao
+### Step 5 — Free AI keys lagao (optional, lekin behtar jawab ke liye)
+`.env.example` ko `.env` naam se copy karo aur teeno keys bharo
+(teeno lagane ki salah hai — fallback chain tabhi kaam karegi):
+
+| API | Free key kahan se milegi | .env mein |
+|---|---|---|
+| **GLM (z.ai)** | https://z.ai/manage-apikey/apikey-list — free model `glm-4.7-flash` | `GLM_API_KEY=` |
+| **NVIDIA NIM** | https://build.nvidia.com → *Get API Key* (`nvapi-...`) | `NVIDIA_API_KEY=` |
+| **Google Gemini** | https://aistudio.google.com/apikey | `GEMINI_API_KEY=` |
+
+Keys bhar kar server start karne par website ke left panel mein
+teeno ka status ✅ dikhega, aur **"🔑 API Keys Test Karo"** button se
+har key ko live test bhi kar sakte ho.
+
+**Fallback aise kaam karta hai:** sawaal par pehle PDF se relevant
+pages nikalte hain, phir **GLM → NVIDIA → Gemini** order mein AI ko
+bhejte hain. Koi API fail hui (galat key, rate-limit 429, timeout,
+server down) to agli apne aap try hoti hai — jawab ke neeche dikhega
+bhi ki *"Pehele fail hui: GLM — isliye agli API use hui"*. Teeno fail
+ho jayein to purana database-search jawab mil jata hai.
+Order badalna ho to `.env` mein `AI_PROVIDER_ORDER=gemini,glm,nvidia`
+jaisa set karo; AI pura band karna ho to `AI_MODE=off`.
+
+### Step 6 — Server chalao
 ```bash
 npm start
 ```
@@ -116,9 +139,11 @@ hai. Ye sab test karke verified hai:
 - ✍️ Handwriting OCR se theek nahi padhegi — printed text best hai.
 - 🇮🇳 Hindi printed text ke liye Tesseract (hin) best hai
   (neeche dekho); default RapidOCR English mein strong hai.
-- Bina AI ke jawab *"likha hua"* nahi hota — PDF ke relevant hisse
-  page number ke saath milte hain. Sawaal mein PDF ke exact shabd
-  rakho: `"UPI QR kaise banta hai?"`, `"Laptop price stock"`.
+- Agar koi AI key na lagi ho (ya teeno fail ho jayein) to jawab
+  *"likha hua"* nahi hota — PDF ke relevant hisse page number ke
+  saath milte hain. Sawaal mein PDF ke exact shabd rakho:
+  `"UPI QR kaise banta hai?"`, `"Laptop price stock"`. AI keys
+  lagte hi wahi hisse AI saaf bhasha mein jawab bana deta hai.
 
 ## 🔍 OCR engine
 

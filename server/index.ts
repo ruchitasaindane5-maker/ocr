@@ -1,6 +1,9 @@
-// PDF OCR + Prisma Database Q&A (bina AI) — Node/Express server
+// PDF OCR + Prisma Database Q&A — Node/Express server
 // Chalane ke liye:  npm install  &&  npm run db:setup  &&  npm start
 // Phir http://localhost:8000 kholo.
+// AI (optional): .env mein GLM/NVIDIA/GEMINI keys daalo to jawab AI se
+// aayega (fallback chain), warna database-search jawab milta hai.
+import "dotenv/config";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -9,6 +12,7 @@ import multer from "multer";
 import { DB_PATH, ensureFtsTable, prisma } from "./prisma.js";
 import * as store from "./store.js";
 import { answerQuestion } from "./answer.js";
+import { aiStatus, testAiProviders } from "./ai.js";
 import { detectOcrEngine, extractWithPython } from "./worker.js";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
@@ -32,9 +36,10 @@ app.get("/api/status", async (_req, res) => {
     return sum + (fs.existsSync(p) ? fs.statSync(p).size : 0);
   }, 0) / 1024;
   res.json({
-    mode: "no-ai (database search)",
+    mode: "Prisma database + AI fallback chain",
     orm: "Prisma",
     ocr_engine: await detectOcrEngine(),
+    ai: aiStatus(),
     database: { ...stats, db_path: DB_PATH, db_size_kb: Math.round(sizeKb * 10) / 10 },
   });
 });
@@ -114,6 +119,10 @@ app.get("/api/docs/:id/export", async (req, res) => {
   res.setHeader("Content-Type", "text/plain; charset=utf-8");
   res.setHeader("Content-Disposition", `attachment; filename="${base}.txt"`);
   res.send(txt);
+});
+
+app.post("/api/ai/test", async (_req, res) => {
+  res.json({ results: await testAiProviders() });
 });
 
 app.post("/api/ask", async (req, res) => {

@@ -81,7 +81,7 @@
   </div>
 
   <section class="card" id="chat">
-    <h2>2️⃣ Sawaal puchho (database search — bina AI)</h2>
+    <h2>2️⃣ Sawaal puchho (AI jawab, warna database search)</h2>
     <select id="docFilter"><option value="">🌐 Sabhi PDFs mein dhundho</option></select>
     <div id="msgs">
       <div class="msg bot">Namaste! 👋 Pehle PDF upload karo — data database mein save ho jayega. Phir sawaal puchho, jaise:
@@ -113,6 +113,7 @@ async function refreshStatus(){
   $('#dbBadge').innerHTML=`🗄️ Prisma ORM · SQLite: <b>${d.docs} PDFs · ${d.pages} pages · ${d.chunks} chunks</b>`;
   $('#dbDocs').textContent=d.docs; $('#dbPages').textContent=d.pages;
   $('#dbChunks').textContent=d.chunks; $('#dbSize').textContent=d.db_size_kb+' KB';
+  renderAi(s);
 }
 async function refreshDocs(){
   const docs=await (await fetch('/api/docs')).json();
@@ -176,7 +177,14 @@ async function ask(){
       extra='<details class="sources"><summary>📎 Sources ('+r.sources.length+') — kis page se aaya</summary>'+
         r.sources.map(s=>`<div class="src"><span class="pg">${esc(s.doc_name)} · page ${s.page}</span> · match ${Math.round(s.score*100)}% · [${esc(s.method)}]<br>${esc(s.passage)}</div>`).join('')+'</details>';
     }
-    extra+=`<div class="mode">🗄️ Database search se mila jawab (koi AI use nahi hua)</div>`;
+    if(r.mode==='ai'){
+      let note=`🤖 AI jawab — ${esc(r.provider||'')} (${esc(r.model||'')})`;
+      const failed=(r.attempts||[]).filter(a=>!a.ok);
+      if(failed.length) note+=`<br>↪ Pehle fail hui: ${failed.map(a=>esc(a.provider)).join(', ')} — isliye agli API use hui`;
+      extra+=`<div class="mode">${note}</div>`;
+    } else {
+      extra+=`<div class="mode">🗄️ Database search se mila jawab (AI keys nahi lagi, ya teeno fail ho gayi)</div>`;
+    }
     addMsg(esc(r.answer),'bot',extra);
   }catch(e){ addMsg('Error: '+esc(e),'bot'); }
   btn.disabled=false; btn.textContent='Dhundho →'; inp.focus();

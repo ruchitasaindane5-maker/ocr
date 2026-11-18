@@ -1,4 +1,6 @@
-// Sawaal -> database search -> jawab. 100% bina AI ke (Python version ka port)
+// Sawaal -> database search -> jawab.
+// Keys lagi hon to AI fallback chain (GLM -> NVIDIA -> Gemini) jawab
+// likhti hai; warna/teeno fail hon to database-search wala jawab.
 import { STOPWORDS, tokenize } from "./chunk.js";
 import { search, type Hit } from "./search.js";
 import { listDocs, termIdf } from "./store.js";
@@ -61,6 +63,15 @@ export async function answerQuestion(
       doc_id: h.doc_id, doc_name: h.doc_name, page: h.page, score: h.score,
       method: h.method, passage: h.text.slice(0, 600),
     });
+  }
+  // Pehle AI fallback chain (GLM -> NVIDIA -> Gemini), fail ho to DB jawab
+  const { generateAiAnswer } = await import("./ai.js");
+  const ai = await generateAiAnswer(question, hits);
+  if (ai) {
+    return {
+      answer: ai.text, sources, mode: "ai",
+      provider: ai.provider, model: ai.model, attempts: ai.attempts,
+    };
   }
   return {
     answer: await extractiveAnswer(question, hits),
