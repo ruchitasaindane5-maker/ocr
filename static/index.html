@@ -1,0 +1,224 @@
+<!doctype html>
+<html lang="hi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PDF OCR + Database Q&amp;A (No AI)</title>
+<style>
+  :root{--bg:#0f1420;--card:#182034;--card2:#1f2a44;--txt:#e8ecf4;--mut:#93a0b8;--acc:#5b8cff;--ok:#3ecf8e;--warn:#ffb84d}
+  *{box-sizing:border-box} body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;background:var(--bg);color:var(--txt)}
+  header{display:flex;gap:12px;align-items:center;padding:14px 20px;background:var(--card);border-bottom:1px solid #263252;flex-wrap:wrap}
+  header h1{font-size:19px;margin:0} header .sub{color:var(--mut);font-size:13px}
+  .badge{font-size:12px;padding:4px 10px;border-radius:99px;background:var(--card2);border:1px solid #2f4066}
+  .badge b{color:var(--ok)} a{color:var(--acc)}
+  main{display:grid;grid-template-columns:350px 1fr;gap:16px;padding:16px;max-width:1320px;margin:auto}
+  @media(max-width:860px){main{grid-template-columns:1fr}}
+  .card{background:var(--card);border:1px solid #263252;border-radius:14px;padding:16px}
+  .card h2{font-size:15px;margin:0 0 10px}
+  #drop{border:2px dashed #36507f;border-radius:12px;padding:22px;text-align:center;color:var(--mut);cursor:pointer}
+  #drop.over{border-color:var(--acc);color:var(--txt);background:var(--card2)}
+  select,input[type=text]{background:var(--card2);color:var(--txt);border:1px solid #2f4066;border-radius:9px;padding:9px;width:100%}
+  button{background:var(--acc);color:#fff;border:0;border-radius:9px;padding:9px 16px;cursor:pointer;font-weight:600}
+  button:disabled{opacity:.5;cursor:wait} .ghost{background:var(--card2);border:1px solid #2f4066}
+  .doc{border:1px solid #263252;border-radius:10px;padding:10px;margin-top:10px;background:var(--card2)}
+  .doc .nm{font-weight:600;font-size:13.5px;word-break:break-all} .doc .meta{color:var(--mut);font-size:12px;margin-top:3px;line-height:1.5}
+  .doc .row{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap} .doc button,.doc a.btn{padding:5px 9px;font-size:12px}
+  a.btn{background:var(--card);border:1px solid #2f4066;border-radius:8px;color:var(--txt);text-decoration:none}
+  #chat{display:flex;flex-direction:column;height:calc(100vh - 190px);min-height:450px}
+  #msgs{flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:12px;padding:4px}
+  .msg{max-width:88%;padding:11px 14px;border-radius:13px;white-space:pre-wrap;line-height:1.55;font-size:14.5px}
+  .msg.user{align-self:flex-end;background:#2451a6;border-bottom-right-radius:4px}
+  .msg.bot{align-self:flex-start;background:var(--card2);border:1px solid #2a3a5e;border-bottom-left-radius:4px}
+  .msg .mode{font-size:11px;color:var(--mut);margin-top:7px}
+  details.sources{margin-top:9px;font-size:13px} details.sources summary{cursor:pointer;color:var(--acc)}
+  .src{background:#141c2f;border:1px solid #263252;border-radius:9px;padding:8px 10px;margin-top:7px;color:#c6d0e4}
+  .src .pg{color:var(--ok);font-weight:600;font-size:12px}
+  #askrow{display:flex;gap:9px;margin-top:12px} #askrow input{flex:1}
+  label.chk{display:flex;gap:8px;align-items:center;font-size:13px;color:var(--mut);margin-top:10px;cursor:pointer}
+  .err{color:#ff8f8f;font-size:13px;margin-top:8px} .good{color:var(--ok);font-size:13px;margin-top:8px}
+  dialog{background:var(--card);color:var(--txt);border:1px solid #2f4066;border-radius:14px;max-width:780px;width:92%;max-height:85vh}
+  dialog pre{white-space:pre-wrap;font-size:13px;line-height:1.5;overflow-y:auto;max-height:62vh}
+  .hint{font-size:12.5px;color:var(--mut);line-height:1.6}
+  table.db{width:100%;font-size:13px;border-collapse:collapse} table.db td{padding:4px 2px;color:var(--mut)} table.db td:last-child{text-align:right;color:var(--txt);font-weight:600}
+</style>
+</head>
+<body>
+<header>
+  <h1>📄 PDF OCR + Database Q&amp;A</h1>
+  <span class="sub">Koi bhi PDF daalo → text/OCR nikal kar <b>SQLite database</b> mein save → sawaal puchho</span>
+  <span class="badge" id="aiBadge">🤖 AI: …</span>
+  <span class="badge" id="ocrBadge">OCR: …</span>
+  <span class="badge" id="dbBadge">Database: …</span>
+</header>
+
+<main>
+  <div>
+    <section class="card">
+      <h2>1️⃣ PDF Upload karo</h2>
+      <div id="drop">PDF yahan drag &amp; drop karo<br>ya click karke choose karo<br><small>(digital, scanned, screenshot wali — sab chalengi)</small></div>
+      <input type="file" id="file" accept="application/pdf" multiple hidden>
+      <label class="chk"><input type="checkbox" id="ocrAlways"> Har page par OCR chalao (slow, screenshots ka andar ka text pakka milega)</label>
+      <p class="hint">Auto mode mein: scanned page, kharab text-layer aur bade screenshot wale page par OCR khud chal jata hai. Tables bhi alag se nikalti hain.</p>
+      <div id="upStatus"></div>
+    </section>
+
+    <section class="card" style="margin-top:16px">
+      <h2>🗄️ Database (Prisma ORM · SQLite)</h2>
+      <table class="db">
+        <tr><td>File</td><td>data/pdf_qa.db</td></tr>
+        <tr><td>PDFs saved</td><td id="dbDocs">–</td></tr>
+        <tr><td>Pages saved</td><td id="dbPages">–</td></tr>
+        <tr><td>Search chunks</td><td id="dbChunks">–</td></tr>
+        <tr><td>Database size</td><td id="dbSize">–</td></tr>
+      </table>
+      <p class="hint">Har upload ka page-wise text database mein permanently save hota hai — app band karke kholne par bhi data wahi rahega, dobara process nahi karna padega.</p>
+    </section>
+
+    <section class="card" style="margin-top:16px">
+      <h2>🤖 Free AI APIs — Fallback Chain</h2>
+      <div id="aiList"><p class="hint">Check ho raha hai…</p></div>
+      <p class="hint">Chain: <b>Ollama (local) → GLM → NVIDIA → Gemini</b>. Ek fail hua to agli apne aap chalegi; sab fail ho jayein to jawab database-search se milega. Ollama ko key nahi chahiye (apne PC par chalta hai); baaki keys <b>.env</b> file mein lagti hain. Server restart ke baad status yahan dikhega.</p>
+      <button class="ghost" id="testAiBtn" style="margin-top:8px">🔑 API Keys Test Karo</button>
+      <div id="aiTestResult"></div>
+    </section>
+
+    <section class="card" style="margin-top:16px">
+      <h2>📚 Database mein saved PDFs</h2>
+      <div id="docs"><p class="hint">Abhi koi PDF nahi hai.</p></div>
+    </section>
+  </div>
+
+  <section class="card" id="chat">
+    <h2>2️⃣ Sawaal puchho (AI jawab, warna database search)</h2>
+    <select id="docFilter"><option value="">🌐 Sabhi PDFs mein dhundho</option></select>
+    <div id="msgs">
+      <div class="msg bot">Namaste! 👋 Pehle PDF upload karo — data database mein save ho jayega. Phir sawaal puchho, jaise:
+• "UPI QR kaise banta hai?"
+• "GTM Command Center ke steps"
+• "WhatsApp Cloud API setup"
+
+⚠️ Bina AI ke jawab = PDF mein mile exact hisse, page number ke saath. Sawaal mein PDF ke shabd use karne se sabse sahi result milta hai.</div>
+    </div>
+    <div id="askrow">
+      <input type="text" id="q" placeholder="PDF ke shabdon mein sawaal likho… (Hindi / Hinglish / English)" autocomplete="off">
+      <button id="askBtn">Dhundho →</button>
+    </div>
+  </section>
+</main>
+
+<dialog id="textDlg">
+  <h3 id="dlgTitle" style="margin-top:0"></h3>
+  <pre id="dlgBody"></pre>
+  <button class="ghost" onclick="document.getElementById('textDlg').close()">Band karo</button>
+</dialog>
+
+<script>
+const $=s=>document.querySelector(s);
+async function refreshStatus(){
+  const s=await (await fetch('/api/status')).json();
+  $('#ocrBadge').innerHTML=`OCR engine: <b>${s.ocr_engine||'nahi mila (sirf text layer)'}</b>`;
+  const d=s.database;
+  $('#dbBadge').innerHTML=`🗄️ Prisma ORM · SQLite: <b>${d.docs} PDFs · ${d.pages} pages · ${d.chunks} chunks</b>`;
+  $('#dbDocs').textContent=d.docs; $('#dbPages').textContent=d.pages;
+  $('#dbChunks').textContent=d.chunks; $('#dbSize').textContent=d.db_size_kb+' KB';
+  renderAi(s);
+}
+function renderAi(s){
+  const b=$('#aiBadge'), list=$('#aiList');
+  const ai=s.ai||{providers:[]};
+  if(ai.enabled){ b.innerHTML=`🤖 AI: <b>ON — ${esc(ai.chain)}</b>`; }
+  else { b.innerHTML=`🤖 AI: <b>OFF (koi key nahi — database search chalega)</b>`; }
+  list.innerHTML=ai.providers.map(p=>
+    `<div class="doc" style="margin-top:7px"><div class="nm">${p.order}. ${esc(p.name)} <span style="color:${p.configured?'var(--ok)':'var(--warn)'}">${p.configured?'✅ key lagi hai':'⚠️ key nahi hai'}</span></div>
+     <div class="meta">model: ${esc(p.model)} · env: ${esc(p.key_env)} · ${esc(p.free_note)}</div></div>`).join('');
+}
+document.addEventListener('click', async (e)=>{
+  if(e.target.id!=='testAiBtn') return;
+  const out=$('#aiTestResult'); out.innerHTML='<div class="good" style="color:var(--warn)">⏳ Teeno APIs ko test call ja raha hai…</div>';
+  try{
+    const r=await (await fetch('/api/ai/test',{method:'POST'})).json();
+    out.innerHTML=r.results.map(x=> x.configured
+      ? `<div class="${x.ok?'good':'err'}">${x.ok?'✅':'❌'} ${esc(x.provider)} (${esc(x.model)}) — ${x.ok?('chal rahi hai · '+x.ms+'ms'):esc(x.error||'fail')}</div>`
+      : `<div class="hint">⚠️ ${esc(x.provider)} — key nahi lagi, skip</div>`).join('');
+  }catch(err){ out.innerHTML='<div class="err">Test fail: '+esc(err)+'</div>'; }
+});
+async function refreshDocs(){
+  const docs=await (await fetch('/api/docs')).json();
+  const box=$('#docs'), sel=$('#docFilter'), cur=sel.value;
+  sel.innerHTML='<option value="">🌐 Sabhi PDFs mein dhundho</option>';
+  if(!docs.length){box.innerHTML='<p class="hint">Abhi koi PDF nahi hai.</p>';return;}
+  box.innerHTML='';
+  docs.forEach(d=>{
+    sel.insertAdjacentHTML('beforeend',`<option value="${d.id}">${d.name}</option>`);
+    box.insertAdjacentHTML('beforeend',
+    `<div class="doc"><div class="nm">${d.name}</div>
+     <div class="meta">✅ Database mein saved · ${d.pages} pages · ${d.chars.toLocaleString()} chars · ${d.chunks} chunks${d.tables_found?` · 📊 ${d.tables_found} tables`:''}${d.ocr_pages?` · 🔍 OCR pages: ${d.ocr_pages}`:''}<br>🕐 ${d.created_at.replace('T',' ')}</div>
+     <div class="row"><button class="ghost" onclick="viewText('${d.id}')">📖 Data dekho</button>
+     <a class="btn" href="/api/docs/${d.id}/export?format=txt" download>⬇ TXT</a>
+     <a class="btn" href="/api/docs/${d.id}/export?format=csv" download>⬇ CSV</a>
+     <a class="btn" href="/api/docs/${d.id}/export?format=json" download>⬇ JSON</a>
+     <button class="ghost" onclick="delDoc('${d.id}')">🗑 Hatao</button></div></div>`);
+  });
+  sel.value=cur;
+}
+async function viewText(id){
+  const d=await (await fetch(`/api/docs/${id}/text`)).json();
+  $('#dlgTitle').textContent=d.name+' — database mein saved page-wise data';
+  $('#dlgBody').textContent=d.pages.map(p=>`\n===== Page ${p.page} [${p.method}] =====\n`+(p.text||'(khali)')).join('\n');
+  $('#textDlg').showModal();
+}
+async function delDoc(id){ if(confirm('Ye PDF database se hata du?')){await fetch(`/api/docs/${id}`,{method:'DELETE'}); refreshDocs(); refreshStatus();} }
+const drop=$('#drop'), fileInp=$('#file');
+drop.onclick=()=>fileInp.click();
+['dragover','dragenter'].forEach(e=>drop.addEventListener(e,ev=>{ev.preventDefault();drop.classList.add('over')}));
+['dragleave','drop'].forEach(e=>drop.addEventListener(e,ev=>{ev.preventDefault();drop.classList.remove('over')}));
+drop.addEventListener('drop',ev=>upload(ev.dataTransfer.files));
+fileInp.onchange=()=>upload(fileInp.files);
+async function upload(files){
+  if(!files.length) return;
+  const st=$('#upStatus'); st.innerHTML='<div class="good" style="color:var(--warn)">⏳ Process ho raha hai… (OCR mode mein thoda time lagega)</div>';
+  const fd=new FormData();
+  [...files].forEach(f=>fd.append('files',f));
+  fd.append('ocr_mode',$('#ocrAlways').checked?'always':'auto');
+  try{
+    const r=await (await fetch('/api/upload',{method:'POST',body:fd})).json();
+    let html=r.added.map(d=>`<div class="good">✅ ${d.name} — ${d.pages} pages, ${d.chunks} chunks<br>🗄️ Database mein save ho gaya (id: ${d.id})</div>`).join('');
+    html+=r.errors.map(e=>`<div class="err">❌ ${e.name}: ${e.error}</div>`).join('');
+    st.innerHTML=html||'<div class="err">Kuch add nahi hua</div>';
+  }catch(e){ st.innerHTML='<div class="err">Upload fail: '+e+'</div>'; }
+  fileInp.value=''; refreshDocs(); refreshStatus();
+}
+function addMsg(text,who,extra=''){
+  $('#msgs').insertAdjacentHTML('beforeend',`<div class="msg ${who}">${text}${extra}</div>`);
+  $('#msgs').scrollTop=1e9;
+}
+function esc(s){const d=document.createElement('div');d.textContent=s;return d.innerHTML;}
+async function ask(){
+  const inp=$('#q'), q=inp.value.trim(); if(!q) return;
+  addMsg(esc(q),'user'); inp.value=''; const btn=$('#askBtn'); btn.disabled=true; btn.textContent='Database mein dhundh raha hoon…';
+  try{
+    const r=await (await fetch('/api/ask',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({question:q,doc_id:$('#docFilter').value||null})})).json();
+    let extra='';
+    if(r.sources&&r.sources.length){
+      extra='<details class="sources"><summary>📎 Sources ('+r.sources.length+') — kis page se aaya</summary>'+
+        r.sources.map(s=>`<div class="src"><span class="pg">${esc(s.doc_name)} · page ${s.page}</span> · match ${Math.round(s.score*100)}% · [${esc(s.method)}]<br>${esc(s.passage)}</div>`).join('')+'</details>';
+    }
+    if(r.mode==='ai'){
+      let note=`🤖 AI jawab — ${esc(r.provider||'')} (${esc(r.model||'')})`;
+      const failed=(r.attempts||[]).filter(a=>!a.ok);
+      if(failed.length) note+=`<br>↪ Pehle fail hui: ${failed.map(a=>esc(a.provider)).join(', ')} — isliye agli API use hui`;
+      extra+=`<div class="mode">${note}</div>`;
+    } else {
+      extra+=`<div class="mode">🗄️ Database search se mila jawab (AI keys nahi lagi, ya teeno fail ho gayi)</div>`;
+    }
+    addMsg(esc(r.answer),'bot',extra);
+  }catch(e){ addMsg('Error: '+esc(e),'bot'); }
+  btn.disabled=false; btn.textContent='Dhundho →'; inp.focus();
+}
+$('#askBtn').onclick=ask;
+$('#q').addEventListener('keydown',e=>{if(e.key==='Enter')ask()});
+refreshStatus(); refreshDocs();
+</script>
+</body>
+</html>
