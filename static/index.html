@@ -1,0 +1,163 @@
+<!doctype html>
+<html lang="hi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PDF OCR Q&amp;A — PDF se Sawaal-Jawab</title>
+<style>
+  :root{--bg:#0f1420;--card:#182034;--card2:#1f2a44;--txt:#e8ecf4;--mut:#93a0b8;--acc:#5b8cff;--ok:#3ecf8e;--warn:#ffb84d}
+  *{box-sizing:border-box} body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;background:var(--bg);color:var(--txt)}
+  header{display:flex;gap:12px;align-items:center;padding:14px 20px;background:var(--card);border-bottom:1px solid #263252;flex-wrap:wrap}
+  header h1{font-size:19px;margin:0} header .sub{color:var(--mut);font-size:13px}
+  .badge{font-size:12px;padding:4px 10px;border-radius:99px;background:var(--card2);border:1px solid #2f4066}
+  .badge b{color:var(--ok)} .badge.off b{color:var(--warn)}
+  main{display:grid;grid-template-columns:340px 1fr;gap:16px;padding:16px;max-width:1300px;margin:auto}
+  @media(max-width:860px){main{grid-template-columns:1fr}}
+  .card{background:var(--card);border:1px solid #263252;border-radius:14px;padding:16px}
+  .card h2{font-size:15px;margin:0 0 10px}
+  #drop{border:2px dashed #36507f;border-radius:12px;padding:22px;text-align:center;color:var(--mut);cursor:pointer}
+  #drop.over{border-color:var(--acc);color:var(--txt);background:var(--card2)}
+  select,input[type=text],textarea{background:var(--card2);color:var(--txt);border:1px solid #2f4066;border-radius:9px;padding:9px;width:100%}
+  button{background:var(--acc);color:#fff;border:0;border-radius:9px;padding:9px 16px;cursor:pointer;font-weight:600}
+  button:disabled{opacity:.5;cursor:wait} .ghost{background:var(--card2);border:1px solid #2f4066}
+  .doc{border:1px solid #263252;border-radius:10px;padding:10px;margin-top:10px;background:var(--card2)}
+  .doc .nm{font-weight:600;font-size:13.5px;word-break:break-all} .doc .meta{color:var(--mut);font-size:12px;margin-top:3px}
+  .doc .row{display:flex;gap:8px;margin-top:8px} .doc button{padding:5px 10px;font-size:12px}
+  #chat{display:flex;flex-direction:column;height:calc(100vh - 190px);min-height:450px}
+  #msgs{flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:12px;padding:4px}
+  .msg{max-width:88%;padding:11px 14px;border-radius:13px;white-space:pre-wrap;line-height:1.55;font-size:14.5px}
+  .msg.user{align-self:flex-end;background:#2451a6;border-bottom-right-radius:4px}
+  .msg.bot{align-self:flex-start;background:var(--card2);border:1px solid #2a3a5e;border-bottom-left-radius:4px}
+  .msg .mode{font-size:11px;color:var(--mut);margin-top:7px}
+  details.sources{margin-top:9px;font-size:13px} details.sources summary{cursor:pointer;color:var(--acc)}
+  .src{background:#141c2f;border:1px solid #263252;border-radius:9px;padding:8px 10px;margin-top:7px;color:#c6d0e4}
+  .src .pg{color:var(--ok);font-weight:600;font-size:12px}
+  #askrow{display:flex;gap:9px;margin-top:12px} #askrow input{flex:1}
+  label.chk{display:flex;gap:8px;align-items:center;font-size:13px;color:var(--mut);margin-top:10px;cursor:pointer}
+  .err{color:#ff8f8f;font-size:13px;margin-top:8px} .spin{color:var(--warn);font-size:13px;margin-top:8px}
+  dialog{background:var(--card);color:var(--txt);border:1px solid #2f4066;border-radius:14px;max-width:760px;width:92%;max-height:85vh}
+  dialog pre{white-space:pre-wrap;font-size:13px;line-height:1.5;overflow-y:auto;max-height:62vh}
+  .hint{font-size:12.5px;color:var(--mut);line-height:1.5}
+</style>
+</head>
+<body>
+<header>
+  <h1>📄 PDF OCR Q&amp;A</h1>
+  <span class="sub">PDF upload karo → OCR/text niklega → sawaal puchho, page number ke saath jawab milega</span>
+  <span class="badge" id="llmBadge">mode: …</span>
+  <span class="badge" id="ocrBadge">OCR: …</span>
+</header>
+
+<main>
+  <section class="card">
+    <h2>1️⃣ PDF Upload karo</h2>
+    <div id="drop">PDF yahan drag &amp; drop karo<br>ya click karke choose karo<br><small>(ek saath kai PDFs chalengi)</small></div>
+    <input type="file" id="file" accept="application/pdf" multiple hidden>
+    <label class="chk"><input type="checkbox" id="ocrAlways"> Har page par OCR chalao (slow, lekin screenshots ke andar ka text bhi milega)</label>
+    <label class="chk"><input type="checkbox" id="ocrAuto" checked disabled> Auto: scanned page / bade screenshot wale page par OCR khud chalega</label>
+    <div id="upStatus"></div>
+    <h2 style="margin-top:18px">📚 Tumhari PDFs</h2>
+    <div id="docs"><p class="hint">Abhi koi PDF nahi hai.</p></div>
+  </section>
+
+  <section class="card" id="chat">
+    <h2>2️⃣ Sawaal puchho</h2>
+    <select id="docFilter"><option value="">🌐 Sabhi PDFs mein dhundho</option></select>
+    <div id="msgs">
+      <div class="msg bot">Namaste! 👋 Pehle left se PDF upload karo, phir yahan koi bhi sawaal puchho — jaise:
+• "WhatsApp agent banane ke liye kya-kya chahiye?"
+• "GTM Command Center mein kitne steps hain?"
+Jawab ke saath source page bhi dikhega.</div>
+    </div>
+    <div id="askrow">
+      <input type="text" id="q" placeholder="Apna sawaal yahan likho… (Hindi / Hinglish / English)" autocomplete="off">
+      <button id="askBtn">Poochho →</button>
+    </div>
+  </section>
+</main>
+
+<dialog id="textDlg">
+  <h3 id="dlgTitle" style="margin-top:0"></h3>
+  <pre id="dlgBody"></pre>
+  <button class="ghost" onclick="document.getElementById('textDlg').close()">Band karo</button>
+</dialog>
+
+<script>
+const $=s=>document.querySelector(s);
+async function refreshStatus(){
+  const s=await (await fetch('/api/status')).json();
+  const b=$('#llmBadge');
+  if(s.llm.mode==='llm'){b.innerHTML=`AI mode: <b>${s.llm.provider} · ${s.llm.model}</b>`;b.classList.remove('off');}
+  else{b.innerHTML=`AI mode: <b>Offline extractive</b> (API key nahi hai — README dekho)`;b.classList.add('off');}
+  $('#ocrBadge').innerHTML=`OCR engine: <b>${s.ocr_engine||'nahi mila (sirf text layer chalegi)'}</b>`;
+}
+async function refreshDocs(){
+  const docs=await (await fetch('/api/docs')).json();
+  const box=$('#docs'), sel=$('#docFilter'), cur=sel.value;
+  sel.innerHTML='<option value="">🌐 Sabhi PDFs mein dhundho</option>';
+  if(!docs.length){box.innerHTML='<p class="hint">Abhi koi PDF nahi hai.</p>';return;}
+  box.innerHTML='';
+  docs.forEach(d=>{
+    sel.insertAdjacentHTML('beforeend',`<option value="${d.id}">${d.name}</option>`);
+    box.insertAdjacentHTML('beforeend',
+    `<div class="doc"><div class="nm">${d.name}</div>
+     <div class="meta">${d.pages} pages · ${d.chars.toLocaleString()} chars · ${d.chunks} chunks${d.ocr_pages?` · OCR pages: ${d.ocr_pages} (${d.ocr_engine||''})`:''}</div>
+     <div class="row"><button class="ghost" onclick="viewText('${d.id}')">📖 Text dekho</button>
+     <button class="ghost" onclick="delDoc('${d.id}')">🗑 Hatao</button></div></div>`);
+  });
+  sel.value=cur;
+}
+async function viewText(id){
+  const d=await (await fetch(`/api/docs/${id}/text`)).json();
+  $('#dlgTitle').textContent=d.name+' — extracted text';
+  $('#dlgBody').textContent=d.pages.map(p=>`\n===== Page ${p.page} [${p.method}] =====\n`+(p.text||'(khali)')).join('\n');
+  $('#textDlg').showModal();
+}
+async function delDoc(id){ if(confirm('Ye PDF hata du?')){await fetch(`/api/docs/${id}`,{method:'DELETE'}); refreshDocs(); refreshStatus();} }
+const drop=$('#drop'), fileInp=$('#file');
+drop.onclick=()=>fileInp.click();
+['dragover','dragenter'].forEach(e=>drop.addEventListener(e,ev=>{ev.preventDefault();drop.classList.add('over')}));
+['dragleave','drop'].forEach(e=>drop.addEventListener(e,ev=>{ev.preventDefault();drop.classList.remove('over')}));
+drop.addEventListener('drop',ev=>upload(ev.dataTransfer.files));
+fileInp.onchange=()=>upload(fileInp.files);
+async function upload(files){
+  if(!files.length) return;
+  const st=$('#upStatus'); st.innerHTML='<div class="spin">⏳ Process ho raha hai… (OCR mode mein thoda time lagega)</div>';
+  const fd=new FormData();
+  [...files].forEach(f=>fd.append('files',f));
+  fd.append('ocr_mode',$('#ocrAlways').checked?'always':'auto');
+  try{
+    const r=await (await fetch('/api/upload',{method:'POST',body:fd})).json();
+    let html=r.added.map(d=>`<div class="spin" style="color:var(--ok)">✅ ${d.name} — ${d.pages} pages, ${d.chunks} chunks ready</div>`).join('');
+    html+=r.errors.map(e=>`<div class="err">❌ ${e.name}: ${e.error}</div>`).join('');
+    st.innerHTML=html||'<div class="err">Kuch add nahi hua</div>';
+  }catch(e){ st.innerHTML='<div class="err">Upload fail: '+e+'</div>'; }
+  fileInp.value=''; refreshDocs(); refreshStatus();
+}
+function addMsg(text,who,extra=''){
+  $('#msgs').insertAdjacentHTML('beforeend',`<div class="msg ${who}">${text}${extra}</div>`);
+  $('#msgs').scrollTop=1e9;
+}
+function esc(s){const d=document.createElement('div');d.textContent=s;return d.innerHTML;}
+async function ask(){
+  const inp=$('#q'), q=inp.value.trim(); if(!q) return;
+  addMsg(esc(q),'user'); inp.value=''; const btn=$('#askBtn'); btn.disabled=true; btn.textContent='Dhundh raha hoon…';
+  try{
+    const r=await (await fetch('/api/ask',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({question:q,doc_id:$('#docFilter').value||null})})).json();
+    let extra='';
+    if(r.sources&&r.sources.length){
+      extra='<details class="sources"><summary>📎 Sources ('+r.sources.length+') — kis page se aaya</summary>'+
+        r.sources.map(s=>`<div class="src"><span class="pg">${esc(s.doc_name)} · page ${s.page}</span> · match ${Math.round(s.score*100)}%<br>${esc(s.passage)}</div>`).join('')+'</details>';
+    }
+    extra+=`<div class="mode">${r.mode==='llm'?'🤖 AI jawab ('+esc(r.provider||'')+')':'📴 Offline mode — PDF ke relevant hisse (AI key lagane se behtar jawab milega)'}</div>`;
+    addMsg(esc(r.answer),'bot',extra);
+  }catch(e){ addMsg('Error: '+esc(e),'bot'); }
+  btn.disabled=false; btn.textContent='Poochho →'; inp.focus();
+}
+$('#askBtn').onclick=ask;
+$('#q').addEventListener('keydown',e=>{if(e.key==='Enter')ask()});
+refreshStatus(); refreshDocs();
+</script>
+</body>
+</html>
