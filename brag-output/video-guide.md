@@ -4,11 +4,11 @@ Three 1080p videos with feminine Hinglish narration, chapter markers, and a sele
 
 | Video | File | Length |
 | --- | --- | ---: |
-| Start here: setup, upload a scan, ask and export | [brag.mp4](https://github.com/akashshinde700/ocr_pdf/releases/download/pdf-qa-video-workshop-v1/brag.mp4) | 1:22 |
-| Code-flow deep dive | [code-flow-deep-dive.mp4](https://github.com/akashshinde700/ocr_pdf/releases/download/pdf-qa-video-workshop-v1/code-flow-deep-dive.mp4) | 6:18 |
-| Local install to Docker on AWS EC2 | [full-setup-deploy.mp4](https://github.com/akashshinde700/ocr_pdf/releases/download/pdf-qa-video-workshop-v1/full-setup-deploy.mp4) | 4:45 |
+| Start here: setup, upload a scan, ask and export | [brag.mp4](./brag.mp4) | 1:22 |
+| Code-flow deep dive | [code-flow-deep-dive.mp4](./code-flow-deep-dive.mp4) | 6:18 |
+| Local install to Docker on AWS EC2 | [full-setup-deploy.mp4](./full-setup-deploy.mp4) | 4:45 |
 
-The MP4s are hosted on the [Video Workshop release](https://github.com/akashshinde700/ocr_pdf/releases/tag/pdf-qa-video-workshop-v1), not tracked in Git. Use the direct download links above after cloning the repository.
+The three final MP4s are included in `brag-output/`. On GitHub, open a file above and choose **Download raw file**. Intermediate audio, screenshots, and renders are not tracked.
 
 ## Jump to a chapter
 
