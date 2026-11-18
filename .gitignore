@@ -9,4 +9,5 @@ server/generated/
 # Video/guide banane ke beech wale files (screenshots, audio, render)
 brag-output/work/
 brag-output/brag.mp4
+brag-output/aws-deploy.mp4
 tests/failures/
