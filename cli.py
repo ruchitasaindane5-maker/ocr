@@ -48,10 +48,20 @@ def main():
     if args.cmd == "add":
         for path in args.files:
             print(f"Processing: {path} ...")
-            with open(path, "rb") as f:
-                data = f.read()
-            info = store.add_document(os.path.basename(path), data,
-                                      extract_pdf(path, ocr_mode=args.ocr))
+            try:
+                if not os.path.isfile(path):
+                    print(f"  ERROR: file nahi mili: {path}")
+                    continue
+                with open(path, "rb") as f:
+                    data = f.read()
+                if data[:4] != b"%PDF":
+                    print("  ERROR: ye PDF file nahi hai")
+                    continue
+                info = store.add_document(os.path.basename(path), data,
+                                          extract_pdf(path, ocr_mode=args.ocr))
+            except Exception as e:  # ek file fail ho to baaki rukni nahi chahiye
+                print(f"  ERROR: {str(e)[:300]}")
+                continue
             print(f"  SAVED IN DB -> id={info['id']} pages={info['pages']} "
                   f"chars={info['chars']} chunks={info['chunks']} "
                   f"tables={info['tables_found']} ocr_pages={info['ocr_pages']}")
@@ -82,6 +92,7 @@ def main():
             print("doc not found")
             return
         base = os.path.splitext(d["name"])[0]
+        base = "".join(c if c not in '\\/:*?"<>|' else "_" for c in base)[:120] or "document"
         out_path = f"{base}_extracted.{args.format}"
         if args.format == "json":
             payload = {**d, "chunks": store.all_chunks(args.doc_id)}
@@ -102,4 +113,10 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except KeyboardInterrupt:
+        print("\nBand kar diya.")
+    except Exception as e:  # traceback ki jagah saaf message
+        print(f"Error: {str(e)[:400]}")
+        raise SystemExit(1)

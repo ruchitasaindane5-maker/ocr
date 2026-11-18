@@ -12,6 +12,7 @@ import io
 import json
 import os
 import sys
+import uuid
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
@@ -39,8 +40,18 @@ def home():
 
 @app.get("/api/status")
 def status():
-    return {"mode": "no-ai (database search)", "ocr_engine": ocr_mod.detect_engine(),
+    # Node server ke shape ke saath compatible rakho taaki ek hi UI
+    # dono servers par chale (Python path par AI chain nahi hai)
+    return {"mode": "python (database search)", "orm": "sqlite3",
+            "ocr_engine": ocr_mod.detect_engine(),
+            "ai": {"enabled": False, "disabled_by_ai_mode_off": False,
+                   "chain": "", "providers": []},
             "database": store.stats()}
+
+
+@app.post("/api/ai/test")
+def ai_test():
+    return {"results": []}
 
 
 @app.get("/api/docs")
@@ -53,30 +64,40 @@ async def upload(files: list[UploadFile] = File(...),
                  ocr_mode: str = Form("auto")):
     results, errors = [], []
     for f in files:
+        tmp = None
         try:
             data = await f.read()
+            if len(data) > 100 * 1024 * 1024:
+                errors.append({"name": f.filename, "error": "File bahut badi hai (max 100 MB)"})
+                continue
             if data[:4] != b"%PDF":
                 errors.append({"name": f.filename, "error": "Ye PDF file nahi hai"})
                 continue
+            # filename browser/curl se aata hai — path traversal roko:
+            # sirf basename, aur temp naam hamesha humara banaya hua
+            safe = os.path.basename(str(f.filename or "file.pdf"))[:200] or "file.pdf"
             tmp = os.path.join(os.path.dirname(os.path.abspath(__file__)),
-                               "data", f"_tmp_{os.getpid()}_{f.filename}")
+                               "data", f"_tmp_{os.getpid()}_{uuid.uuid4().hex}.pdf")
             os.makedirs(os.path.dirname(tmp), exist_ok=True)
             with open(tmp, "wb") as fh:
                 fh.write(data)
-            try:
-                extracted = extract_pdf(tmp, ocr_mode=ocr_mode)
-            finally:
-                os.remove(tmp)
+            extracted = extract_pdf(tmp, ocr_mode=ocr_mode)
             if extracted["total_chars"] < 20:
                 errors.append({"name": f.filename,
                                "error": "Is PDF se text nahi nikal paya. "
                                         "OCR 'always' karke dobara try karo."})
                 continue
-            saved = store.add_document(f.filename, data, extracted)
+            saved = store.add_document(safe, data, extracted)
             saved["saved_in_db"] = True
             results.append(saved)
         except Exception as e:  # ek file fail ho to baki rukni nahi chahiye
             errors.append({"name": f.filename, "error": str(e)[:300]})
+        finally:
+            if tmp:
+                try:
+                    os.remove(tmp)
+                except OSError:
+                    pass
     return {"added": results, "errors": errors}
 
 
@@ -98,7 +119,9 @@ def export_doc(doc_id: str, format: str = "txt"):
     d = store.get_document(doc_id)
     if not d:
         return JSONResponse({"error": "doc not found"}, status_code=404)
+    # Download filename header-safe banao (quote/CRLF se header toot'ta tha)
     base = os.path.splitext(d["name"])[0]
+    base = "".join(c if c not in '"\\/:*?<>|\r\n' else "_" for c in base)[:120] or "document"
     if format == "json":
         payload = {**d, "chunks": store.all_chunks(doc_id)}
         return Response(json.dumps(payload, ensure_ascii=False, indent=1),
