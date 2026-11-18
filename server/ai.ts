@@ -22,6 +22,12 @@ const env = (...names: string[]) => {
   return "";
 };
 
+/** Env se number — kharab value par default, warna NaN se timeout/context toot jata tha */
+function envNumber(name: string, fallback: number): number {
+  const n = Number(process.env[name]);
+  return Number.isFinite(n) && n > 0 ? n : fallback;
+}
+
 export function getProviders(): Provider[] {
   return [
     {
@@ -83,11 +89,10 @@ export async function ollamaInfo(p?: Provider): Promise<OllamaInfo> {
   if (ollamaCache && Date.now() - ollamaCache.at < 20000) return ollamaCache.info;
   const prov = p || getProviders()[0];
   let info: OllamaInfo = { running: false, models: [], hasModel: false };
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), 2000);
   try {
-    const ctrl = new AbortController();
-    const timer = setTimeout(() => ctrl.abort(), 2000);
     const r = await fetch(`${prov.baseUrl.replace(/\/$/, "")}/api/tags`, { signal: ctrl.signal });
-    clearTimeout(timer);
     if (r.ok) {
       const data = await r.json().catch(() => ({}));
       const models = (data?.models || []).map((m: any) => String(m?.name || ""));
@@ -96,7 +101,9 @@ export async function ollamaInfo(p?: Provider): Promise<OllamaInfo> {
         hasModel: models.some((m) => m === prov.model || m.startsWith(prov.model + ":")),
       };
     }
-  } catch { /* Ollama band hai — info default rahega */ }
+  } catch { /* Ollama band hai — info default rahega */ } finally {
+    clearTimeout(timer);
+  }
   ollamaCache = { at: Date.now(), info };
   return info;
 }
@@ -110,15 +117,20 @@ export async function aiStatus() {
       providers.push({
         order: i + 1, id: p.id, name: p.name, model: p.model,
         configured: info.running, key_env: "key nahi chahiye (local)",
-        free_note: info.running
-          ? (info.hasModel ? `✅ Chal raha hai, model ready hai` : `⚠️ Chal raha hai, par model nahi hai — ollama pull ${p.model}`)
-          : p.freeNote,
+        status_text: disabled
+          ? "⏸ AI_MODE=off hai"
+          : info.running
+            ? (info.hasModel ? "✅ Chal raha hai · model ready" : "⚠️ Chal raha hai · model download baki hai")
+            : "⚠️ Chal nahi raha (Ollama app kholo)",
+        free_note: p.freeNote,
         models_downloaded: info.models,
       });
     } else {
+      const has = Boolean(env(...p.keyEnvs));
       providers.push({
         order: i + 1, id: p.id, name: p.name, model: p.model,
-        configured: Boolean(env(...p.keyEnvs)), key_env: p.keyEnvs[0],
+        configured: has, key_env: p.keyEnvs[0],
+        status_text: disabled ? "⏸ AI_MODE=off hai" : has ? "✅ Key lagi hai" : "⚠️ Key nahi lagi",
         free_note: p.freeNote,
       });
     }
@@ -185,7 +197,7 @@ async function callOllama(p: Provider, messages: Msg[], maxTokens: number, timeo
         model: p.model, messages, stream: false,
         options: {
           temperature: 0.2,
-          num_ctx: Number(process.env.OLLAMA_NUM_CTX || 8192), // PDF passages ke liye bada context
+          num_ctx: envNumber("OLLAMA_NUM_CTX", 8192), // PDF passages ke liye bada context
           num_predict: maxTokens,
         },
       }),
@@ -203,17 +215,26 @@ async function callOllama(p: Provider, messages: Msg[], maxTokens: number, timeo
 }
 
 function callProvider(p: Provider, messages: Msg[], maxTokens = 1024,
-                       timeoutMs = Number(process.env.AI_TIMEOUT_MS || 60000)) {
+                       timeoutMs = envNumber("AI_TIMEOUT_MS", 60000)) {
   return p.kind === "ollama"
     ? callOllama(p, messages, maxTokens, timeoutMs)
     : callCloud(p, messages, maxTokens, timeoutMs);
 }
 
 /** Fallback chain se AI jawab. Sab fail ho to null (caller DB jawab dega). */
+export interface AiOutcome {
+  text: string | null; // null = koi AI nahi chala, database jawab bane
+  provider: string;
+  model: string;
+  attempts: Attempt[];
+}
+
 export async function generateAiAnswer(
   question: string, hits: Hit[]
-): Promise<{ text: string; provider: string; model: string; attempts: Attempt[] } | null> {
-  if ((process.env.AI_MODE || "").toLowerCase() === "off") return null;
+): Promise<AiOutcome> {
+  if ((process.env.AI_MODE || "").toLowerCase() === "off") {
+    return { text: null, provider: "", model: "", attempts: [] };
+  }
   ollamaCache = null; // har sawaal par Ollama ki taaza halat check karo
   const context = hits
     .map((h) => `[Source: ${h.doc_name}, page ${h.page}]\n${h.text.slice(0, 1200)}`)
@@ -259,7 +280,8 @@ export async function generateAiAnswer(
       // fail hua -> chain ki agli API try hogi
     }
   }
-  return null;
+  // Sab fail — attempts bhi bhejo taaki UI bata sake ki AI try hua tha
+  return { text: null, provider: "", model: "", attempts };
 }
 
 /** UI ke "keys test karo" button ke liye — har provider ko chhota test call. */

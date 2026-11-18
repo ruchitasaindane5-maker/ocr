@@ -1,9 +1,10 @@
 // ============================================================
-//  PDF OCR Q&A — Prisma ORM Schema (SQLite, bina AI)
+//  PDF OCR Q&A — Prisma ORM Schema (SQLite)
 //  Models: Document -> Page, Chunk (search ke hisse)
 //  chunks_fts (FTS5 virtual table) Prisma model nahi hai — wo
-//  server boot par raw SQL se banti hai (prisma/schema bhi yahi
-//  tables banata hai `npx prisma db push` se).
+//  server boot par raw SQL se banti hai. Tables `npx prisma db push`
+//  se bhi banti hain aur server khud bhi ready kar deta hai
+//  (server/prisma.ts -> ensureSchema).
 // ============================================================
 
 generator client {

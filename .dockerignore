@@ -1,0 +1,11 @@
+.git
+node_modules
+.venv
+data
+server/generated
+__pycache__
+*.pyc
+.env
+*.pdf
+!static/
+.DS_Store

@@ -3,9 +3,10 @@
   "version": "2.0.0",
   "private": true,
   "type": "module",
-  "description": "PDF OCR + Database Q&A (bina AI) — Prisma ORM + SQLite, PDF/OCR worker Python mein",
+  "description": "PDF OCR + Prisma Database Q&A + AI fallback chain (Ollama/GLM/NVIDIA/Gemini) — PDF/OCR worker Python mein",
+  "engines": { "node": ">=20.19" },
   "scripts": {
-    "postinstall": "prisma generate",
+    "postinstall": "prisma generate || echo \"[warn] Prisma Client generate nahi hua — 'npm run db:setup' chalao (kabhi engine download ke liye internet chahiye hota hai)\"",
     "db:generate": "prisma generate",
     "db:push": "prisma db push",
     "db:init": "node scripts/init-db.mjs",

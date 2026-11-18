@@ -36,13 +36,15 @@ def _extractive_answer(question: str, hits: list[dict], store: Store) -> str:
             window = " ".join(x for x in lines[max(0, i - 1): i + 5] if x)
             candidates.append((score, window, h))
     candidates.sort(key=lambda x: -x[0])
-    picked, seen_keys = [], set()
+    # Milte-julte hisse dobara mat dikhao (shabd-overlap se pehchano)
+    picked, picked_tokens = [], []
     for _, window, h in candidates:
-        key = re.sub(r"\W+", "", window.lower())[:80]
-        if key in seen_keys or any(key in s or s in key for s in seen_keys if len(s) > 40):
+        toks = set(tokenize(window))
+        if any(len(toks & pt) / max(1, min(len(toks), len(pt))) > 0.6
+               for pt in picked_tokens):
             continue
-        seen_keys.add(key)
         picked.append((window, h))
+        picked_tokens.append(toks)
         if len(picked) >= 3:
             break
     if not picked:

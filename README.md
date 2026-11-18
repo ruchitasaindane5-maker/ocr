@@ -1,8 +1,10 @@
-# 📄 PDF OCR + Prisma Database Q&A — bina AI ke
+# 📄 PDF OCR + Prisma Database Q&A + AI Fallback Chain
 
 **Jo bhi PDF daalo, uska data proper nikal kar Prisma ORM se SQLite
-database mein save hota hai, aur sawaal ka jawab database search se
-milta hai. Koi AI nahi, koi API key nahi.**
+database mein save hota hai. Sawaal ka jawab pehle AI fallback chain
+(Ollama local → GLM → NVIDIA → Gemini) se aata hai; koi AI na chale
+to database search ka jawab mil hi jata hai — app kabhi rukti nahi.
+Bina kisi key ke bhi poora system chalta hai.**
 
 ```
 Browser ─► Node/Express server ─► Python worker (PDF + OCR: PyMuPDF)
@@ -15,7 +17,10 @@ Browser ─► Node/Express server ─► Python worker (PDF + OCR: PyMuPDF)
           SQLite database — data/pdf_qa.db
           (+ FTS5 full-text index, BM25 search)
                     ▼
-     Sawaal ─► database search ─► jawab + (file, page) source
+     Sawaal ─► search (pages) ─► AI chain: Ollama → GLM → NVIDIA → Gemini
+                    │                    │ sab fail
+                    └────────────────────▼
+                  database-search jawab + (file, page) source
 ```
 
 ---
@@ -23,7 +28,7 @@ Browser ─► Node/Express server ─► Python worker (PDF + OCR: PyMuPDF)
 ## ▶️ Chalane ka tareeka (step-by-step)
 
 ### Pehle ye dono install hone chahiye
-- **Node.js 18+** — https://nodejs.org
+- **Node.js 20.19+** — https://nodejs.org
 - **Python 3.10+** — https://python.org (Windows par install ke time
   *"Add Python to PATH"* tick karna)
 
@@ -32,11 +37,31 @@ Browser ─► Node/Express server ─► Python worker (PDF + OCR: PyMuPDF)
 cd ocr_pdf
 ```
 
+### Sabse aasan tareeka — ek-command setup (recommended)
+
+```bash
+bash setup.sh        # Linux/Mac   (Windows par: setup.bat)
+npm start
+```
+
+`setup.sh` khud `.venv` banata hai, saari Python/Node libraries sahi
+order mein install karta hai (OpenCV headless wala libGL-jhanjhat
+bhi khud sambhalta hai), Prisma Client generate karta hai aur
+database tables ready karke deta hai. Phir browser mein
+**http://localhost:8000** kholo.
+
+### Haath se karna ho to
+
 ### Step 2 — Python (PDF/OCR) ki libraries
 ```bash
-pip install -r requirements.txt
+python3 -m venv .venv
+.venv/bin/pip install -r requirements.txt
+# rapidocr apne saath GUI-wala opencv-python laata hai jo kuch systems
+# par libGL error deta hai — isiliye aakhir mein ye do command zaroor:
+.venv/bin/pip uninstall -y opencv-python
+.venv/bin/pip install --force-reinstall opencv-python-headless
 ```
-Windows par kabhi `pip` ki jagah `py -m pip install -r requirements.txt`.
+Windows par `.venv/bin/pip` ki jagah `.venv\Scripts\pip` use karo.
 
 ### Step 3 — Node + Prisma install
 ```bash
@@ -45,14 +70,14 @@ npm install
 Ye `@prisma/client`, `prisma`, `express` sab install karega aur
 Prisma Client generate karega.
 
-### Step 4 — Database banao (ek hi baar)
+### Step 4 — Database (optional)
 ```bash
 npm run db:setup
 ```
 Isse `data/pdf_qa.db` ban jayega aur models ke tables
 (`documents`, `pages`, `chunks` + FTS5 index) ready ho jayenge.
-*(Standard Prisma wala tareeka chahiye to: `npx prisma db push` —
-dono ka result same hai.)*
+*(Ye step bhool bhi jao to koi baat nahi — server khud pehle boot par
+tables bana deta hai. Standard Prisma wala tareeka: `npx prisma db push`.)*
 
 Database dekhna ho to Prisma Studio:
 ```bash
@@ -129,6 +154,13 @@ nahi karna padega.
 `app.py` (FastAPI) aur `cli.py` abhi bhi repo mein hain aur wahi
 database file use karte hain, lekin **main server ab Node + Prisma hai**.
 
+### ☁️ AWS par deploy karna hai?
+Poori step-by-step guide dekho: **[AWS_DEPLOY.md](AWS_DEPLOY.md)**
+(Docker image ready hai — `Dockerfile` + `docker-compose.yml` +
+`/api/health` health check. EC2 par `docker compose up -d --build`
+se poora product chal jayega; wahan Ollama skip hokar cloud AI
+chain chalti hai.)
+
 ---
 
 ## 🗄️ Prisma Models (prisma/schema.prisma)
@@ -185,16 +217,41 @@ karo, phir `pip install pytesseract Pillow`. Default RapidOCR sirf
 
 | File | Kaam |
 |---|---|
+| `setup.sh` · `setup.bat` | Ek-command setup (venv, libraries, Prisma, DB) |
 | `prisma/schema.prisma` | Prisma models (Document/Page/Chunk) |
 | `prisma.config.ts` | Prisma + SQLite path config |
 | `server/index.ts` | Express API + web UI serve |
 | `server/store.ts` | Prisma ORM se saare DB operations |
 | `server/search.ts` · `server/answer.ts` | FTS5/BM25 + TF-IDF search, jawab |
-| `server/worker.ts` | Python extraction worker ko bulana |
+| `server/ai.ts` | AI fallback chain (Ollama → GLM → NVIDIA → Gemini) |
+| `server/worker.ts` | Python extraction worker ko bulana (timeout ke saath) |
 | `worker.py` + `pdf_ocr_qa/` | PDF padhna + OCR (Python/PyMuPDF) |
-| `static/index.html` | Browser UI (upload, DB panel, chat, export) |
+| `static/index.html` | Browser UI (upload, DB panel, AI panel, chat, export) |
 | `scripts/init-db.mjs` | `prisma db push` ke bina tables banane ka pakka tareeka |
 | `data/pdf_qa.db` | Tumhara database (auto-banta hai, git mein nahi jata) |
 
 Har PDF card par **⬇ TXT / CSV / JSON export** hai — data proper
 aaya ya nahi, khud check kar sakte ho.
+
+## 🔧 Full audit mein kya-kya theek hua (Nov 2026)
+
+- **Fresh DB par server crash hota tha** — tables hi nahi banti thi.
+  Ab server boot par khud schema ready kar deta hai.
+- **OCR chup-chaap fail ho jata tha** (GUI `opencv-python` ka libGL
+  error) — ab setup script headless ko sahi order mein lagata hai,
+  aur engine na mile to upload par saaf chetaavni dikhti hai.
+- **UI mein filename se script chal sakta tha (XSS)** — ab naam
+  hamesha text ki tarah lagta hai; server par bhi naam saaf hota hai.
+- Koi bhi API error ab **poora server crash nahi** karta (saaf JSON
+  error milta hai); upload/download par path-traversal aur header
+  todne wale naam band; badi file (100 MB) aur bada sawaal (2000
+  akshar) par limit.
+- Ek hi PDF do baar/ek saath upload par unique-constraint crash
+  band — sab kuch ek transaction mein save hota hai.
+- Python worker par **15 minute timeout** — badi PDF par system
+  hamesha ke liye nahi atkta; bachi hui temp files apne aap saaf.
+- Jawab mein **milte-julte hisse dobara nahi** aate; bade database
+  par jawab ab tez (IDF ek hi baar banta hai).
+- UI naya: toast notifications, upload progress + timer, typing
+  indicator, example-sawaal chips, jawab copy button, mobile par
+  chat pehle, server down ho to banner, delete se pehle confirm.

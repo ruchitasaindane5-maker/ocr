@@ -1,7 +1,8 @@
 """PDF -> saaf, proper text (page by page) - kisi bhi tarah ki PDF ke liye.
 
 Har PDF alag hoti hai, isliye extraction kai layer mein hoti hai:
-  1. Embedded text layer, reading-order (sort=True) ke saath.
+  1. Embedded text layer, block-based reading-order ke saath
+     (multi-column par pehle left column, phir right).
   2. Tables alag se structured lines mein (cell | cell | cell), taaki
      table ka data flatten hokar bhi khoye nahi.
   3. Form fields (AcroForm) ke values bhi text mein jodte hain.
@@ -163,14 +164,19 @@ def _layout_text(page) -> str:
         blocks.sort(key=lambda b: (round(b[1] / 4), b[0]))
         return "\n".join(b[4].strip() for b in blocks)
     split = best[1]
-    wide = sorted([b for b in blocks if (b[2] - b[0]) > 0.6 * width],
-                  key=lambda b: b[1])
+    wide = [b for b in blocks if (b[2] - b[0]) > 0.6 * width]
     left = sorted([b for b in blocks if b[2] <= split + 2 and b not in wide],
                   key=lambda b: (b[1], b[0]))
     right = sorted([b for b in blocks if b[0] >= split - 2 and b not in wide],
                    key=lambda b: (b[1], b[0]))
     rest = [b for b in blocks if b not in wide + left + right]
-    ordered = wide + left + right + sorted(rest, key=lambda b: b[1])
+    # Full-width block apni asal jagah par rakho: column shuru hone se
+    # upar wala header pehle, baaki (footer) sabse aakhir mein. Pehle saare
+    # wide blocks upar aa jate the — footer bhi page ke top par dikhta tha.
+    col_top = min([b[1] for b in left + right], default=0)
+    header = sorted([b for b in wide if b[1] <= col_top + 2], key=lambda b: b[1])
+    footer = sorted([b for b in wide if b[1] > col_top + 2], key=lambda b: b[1])
+    ordered = header + left + right + sorted(rest, key=lambda b: b[1]) + footer
     return "\n".join(b[4].strip() for b in ordered)
 
 
@@ -234,7 +240,7 @@ def extract_pdf(path: str, ocr_mode: str = "auto") -> dict:
         doc.close()
         raise ValueError("Ye PDF password-protected hai - pehle password hatao.")
     metadata = {k: v for k, v in (doc.metadata or {}).items() if v}
-    pages, tables_total = [], 0
+    pages, tables_total, warnings = [], 0, []
     for page_no, page in enumerate(doc, start=1):
         embedded = clean_text(_layout_text(page))
         tables_txt, n_tables = _tables_text(page)
@@ -247,6 +253,14 @@ def extract_pdf(path: str, ocr_mode: str = "auto") -> dict:
 
         method, text = "text", embedded
         garbage = len(embedded) >= MIN_TEXT_CHARS and _text_quality(embedded) < 0.55
+        if not engine and ocr_mode != "never" and len(embedded) < MIN_TEXT_CHARS:
+            # Scanned page mila par OCR engine hi nahi — wajah chhupao mat,
+            # UI/user ko batao taaki wo engine install kare
+            warnings.append(
+                f"Page {page_no}: scanned hai par OCR engine nahi mila"
+                + (f" ({ocr_mod.last_error()})" if ocr_mod.last_error() else "")
+                + " — pip install opencv-python-headless rapidocr-onnxruntime --no-deps try karo"
+            )
         want_ocr = bool(engine) and (
             ocr_mode == "always"
             or (ocr_mode == "auto" and (
@@ -255,6 +269,12 @@ def extract_pdf(path: str, ocr_mode: str = "auto") -> dict:
         if want_ocr:
             scanned = len(embedded) < MIN_TEXT_CHARS
             zoom = OCR_ZOOM_SCANNED if scanned else OCR_ZOOM_MERGE
+            # Bahut badi page (poster/A3) par pixmap memory kha jata tha —
+            # takreeban 30MP par cap lagao, quality par khaas farak nahi padta
+            max_px = 30_000_000
+            area = page.rect.width * page.rect.height * zoom * zoom
+            if area > max_px:
+                zoom *= (max_px / area) ** 0.5
             pix = page.get_pixmap(matrix=pymupdf.Matrix(zoom, zoom))
             ocr_raw = ocr_mod.ocr_image(pix.tobytes("png"))
             ocr_text = clean_text("\n".join(
@@ -275,4 +295,5 @@ def extract_pdf(path: str, ocr_mode: str = "auto") -> dict:
         "ocr_pages": sum(1 for p in pages if "ocr" in p["method"]),
         "tables_found": tables_total,
         "metadata": {**metadata, "boilerplate_lines_removed": boiler_removed},
+        "warnings": warnings,
     }

@@ -3,7 +3,7 @@
 //  2) TF-IDF fallback (Prisma ORM se chunks padh kar) jab FTS se kam mile
 import { prisma } from "./prisma.js";
 import { STOPWORDS, tokenize } from "./chunk.js";
-import { termIdf } from "./store.js";
+import { ensureIdf, idfOf } from "./store.js";
 
 export interface Hit {
   doc_id: string; doc_name: string; page: number;
@@ -59,10 +59,11 @@ async function tfidfSearch(
     where: docId ? { docId } : {},
     include: { document: { select: { name: true } } },
   });
+  const idf = await ensureIdf(); // ek baar — pehle har token par await hota tha
   const qCounts = new Map<string, number>();
   for (const t of terms) qCounts.set(t, (qCounts.get(t) ?? 0) + 1);
   const qVec = new Map<string, number>();
-  for (const [t, v] of qCounts) qVec.set(t, (1 + Math.log(v)) * (await termIdf(t)));
+  for (const [t, v] of qCounts) qVec.set(t, (1 + Math.log(v)) * idfOf(idf, t));
   const qNorm = Math.sqrt([...qVec.values()].reduce((s, v) => s + v * v, 0)) || 1;
   const scored: Hit[] = [];
   for (const c of chunks) {
@@ -70,7 +71,7 @@ async function tfidfSearch(
     for (const t of tokenize(c.text)) counts.set(t, (counts.get(t) ?? 0) + 1);
     let dot = 0, norm = 0;
     for (const [t, v] of counts) {
-      const w = (1 + Math.log(v)) * (await termIdf(t));
+      const w = (1 + Math.log(v)) * idfOf(idf, t);
       norm += w * w;
       if (qVec.has(t)) dot += (qVec.get(t)! / qNorm) * w;
     }

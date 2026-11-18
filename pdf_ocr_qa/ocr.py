@@ -41,12 +41,23 @@ def _try_easyocr():
         return None
 
 
+_last_error: str | None = None  # aakhri detect/init fail ki wajah (UI ko dikhane ke liye)
+
+
+def last_error() -> str | None:
+    return _last_error
+
+
 def _try_rapidocr():
+    global _last_error
     try:
+        import cv2  # noqa: F401 — opencv-python (GUI) ho to libGL par fail hota hai
+        import onnxruntime  # noqa: F401
         import rapidocr_onnxruntime  # noqa: F401
 
         return "rapidocr"
-    except ImportError:
+    except ImportError as e:
+        _last_error = f"RapidOCR load nahi hua: {e}"
         return None
 
 
