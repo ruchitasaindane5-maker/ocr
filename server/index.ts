@@ -39,7 +39,7 @@ app.get("/api/status", async (_req, res) => {
     mode: "Prisma database + AI fallback chain",
     orm: "Prisma",
     ocr_engine: await detectOcrEngine(),
-    ai: aiStatus(),
+    ai: await aiStatus(),
     database: { ...stats, db_path: DB_PATH, db_size_kb: Math.round(sizeKb * 10) / 10 },
   });
 });

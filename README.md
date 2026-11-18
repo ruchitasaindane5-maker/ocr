@@ -59,7 +59,31 @@ Database dekhna ho to Prisma Studio:
 npm run db:studio
 ```
 
-### Step 5 — Free AI keys lagao (optional, lekin behtar jawab ke liye)
+### Step 5 (A) — Ollama local lagao (sabse best — sirf tumhare PC ke liye)
+
+Tumhara PC: **24 GB RAM + 6 GB graphics card** — iske liye perfect
+model hai **`qwen2.5:7b`** (~4.7 GB download):
+
+1. https://ollama.com se Ollama install karo (Windows app tray mein chalti rehti hai)
+2. Terminal mein model download karo:
+   ```bash
+   ollama pull qwen2.5:7b
+   ```
+3. Bas — server start karne par Ollama **apne aap chain mein pehle
+   number par** use hoga. Koi key nahi, koi internet nahi, koi paisa nahi.
+
+Kyun yahi model tumhare liye best hai:
+- 6 GB VRAM mein model ka bada hissa GPU par rahega, baaki 24 GB RAM
+  sambhal legi → jawab fast (lagbhag 3–8 sec)
+- Hindi/Hinglish Qwen par sabse achhi hai (tumhari PDFs mixed hain)
+- Code mein context `num_ctx 8192` set hai, taaki lambe PDF passages
+  naa katein
+- Chaho to `qwen2.5:14b` bhi chalega (RAM kaafi hai), lekin 6 GB VRAM
+  mein pura fit nahi hoga isliye aadha CPU par chalega — jawab behtar
+  lekin slow (~15–30 sec). `.env` mein `OLLAMA_MODEL=qwen2.5:14b`
+  likh kar badal sakte ho.
+
+### Step 5 (B) — Free AI keys lagao (optional, backup ke liye)
 `.env.example` ko `.env` naam se copy karo aur teeno keys bharo
 (teeno lagane ki salah hai — fallback chain tabhi kaam karegi):
 
@@ -74,8 +98,9 @@ teeno ka status ✅ dikhega, aur **"🔑 API Keys Test Karo"** button se
 har key ko live test bhi kar sakte ho.
 
 **Fallback aise kaam karta hai:** sawaal par pehle PDF se relevant
-pages nikalte hain, phir **GLM → NVIDIA → Gemini** order mein AI ko
-bhejte hain. Koi API fail hui (galat key, rate-limit 429, timeout,
+pages nikalte hain, phir **Ollama (local) → GLM → NVIDIA → Gemini**
+order mein AI ko bhejte hain. Ollama band ho to wo chup-chaap skip
+ho jata hai aur cloud wali chain chalti hai. Koi API fail hui (galat key, rate-limit 429, timeout,
 server down) to agli apne aap try hoti hai — jawab ke neeche dikhega
 bhi ki *"Pehele fail hui: GLM — isliye agli API use hui"*. Teeno fail
 ho jayein to purana database-search jawab mil jata hai.
