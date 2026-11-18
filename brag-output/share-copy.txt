@@ -1,0 +1,3 @@
+PDF daalo, sawaal puchho — jawab page number ke saath. 📄
+Scanned/screenshot PDF par OCR, Prisma database mein save, aur AI fail ho jaye to bhi jawab rukta nahi (Ollama → GLM → NVIDIA → Gemini).
+Poora Setup → Run → Use guide: 2-minute video + Word guide (Hinglish & English) repo mein hai.
