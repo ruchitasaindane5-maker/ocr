@@ -46,7 +46,7 @@
 <header>
   <h1>📄 PDF OCR + Database Q&amp;A</h1>
   <span class="sub">Koi bhi PDF daalo → text/OCR nikal kar <b>SQLite database</b> mein save → sawaal puchho</span>
-  <span class="badge">🚫 AI: <b>OFF — 100% bina AI</b></span>
+  <span class="badge" id="aiBadge">🤖 AI: …</span>
   <span class="badge" id="ocrBadge">OCR: …</span>
   <span class="badge" id="dbBadge">Database: …</span>
 </header>
@@ -72,6 +72,14 @@
         <tr><td>Database size</td><td id="dbSize">–</td></tr>
       </table>
       <p class="hint">Har upload ka page-wise text database mein permanently save hota hai — app band karke kholne par bhi data wahi rahega, dobara process nahi karna padega.</p>
+    </section>
+
+    <section class="card" style="margin-top:16px">
+      <h2>🤖 Free AI APIs — Fallback Chain</h2>
+      <div id="aiList"><p class="hint">Check ho raha hai…</p></div>
+      <p class="hint">Ek fail hui to dusri, dusri fail to teesri apne aap chalegi. Teeno fail ho jayein to jawab database-search se milega. Keys <b>.env</b> file mein lagti hain (GLM_API_KEY / NVIDIA_API_KEY / GEMINI_API_KEY) — server restart ke baad status yahan dikhega.</p>
+      <button class="ghost" id="testAiBtn" style="margin-top:8px">🔑 API Keys Test Karo</button>
+      <div id="aiTestResult"></div>
     </section>
 
     <section class="card" style="margin-top:16px">
@@ -115,6 +123,25 @@ async function refreshStatus(){
   $('#dbChunks').textContent=d.chunks; $('#dbSize').textContent=d.db_size_kb+' KB';
   renderAi(s);
 }
+function renderAi(s){
+  const b=$('#aiBadge'), list=$('#aiList');
+  const ai=s.ai||{providers:[]};
+  if(ai.enabled){ b.innerHTML=`🤖 AI: <b>ON — ${esc(ai.chain)}</b>`; }
+  else { b.innerHTML=`🤖 AI: <b>OFF (koi key nahi — database search chalega)</b>`; }
+  list.innerHTML=ai.providers.map(p=>
+    `<div class="doc" style="margin-top:7px"><div class="nm">${p.order}. ${esc(p.name)} <span style="color:${p.configured?'var(--ok)':'var(--warn)'}">${p.configured?'✅ key lagi hai':'⚠️ key nahi hai'}</span></div>
+     <div class="meta">model: ${esc(p.model)} · env: ${esc(p.key_env)} · ${esc(p.free_note)}</div></div>`).join('');
+}
+document.addEventListener('click', async (e)=>{
+  if(e.target.id!=='testAiBtn') return;
+  const out=$('#aiTestResult'); out.innerHTML='<div class="good" style="color:var(--warn)">⏳ Teeno APIs ko test call ja raha hai…</div>';
+  try{
+    const r=await (await fetch('/api/ai/test',{method:'POST'})).json();
+    out.innerHTML=r.results.map(x=> x.configured
+      ? `<div class="${x.ok?'good':'err'}">${x.ok?'✅':'❌'} ${esc(x.provider)} (${esc(x.model)}) — ${x.ok?('chal rahi hai · '+x.ms+'ms'):esc(x.error||'fail')}</div>`
+      : `<div class="hint">⚠️ ${esc(x.provider)} — key nahi lagi, skip</div>`).join('');
+  }catch(err){ out.innerHTML='<div class="err">Test fail: '+esc(err)+'</div>'; }
+});
 async function refreshDocs(){
   const docs=await (await fetch('/api/docs')).json();
   const box=$('#docs'), sel=$('#docFilter'), cur=sel.value;
