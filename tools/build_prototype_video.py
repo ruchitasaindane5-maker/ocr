@@ -451,7 +451,7 @@ def main():
     # chapter list for the Word document / video guide
     chap_titles = ["Hook — the problem", "The application", "Upload + live OCR", "Ask + sources",
                    "Architecture", "AI fallback chain", "Libraries and models",
-                   "The five repositories", "Your data + mobile", "Outro"]
+                   "Your data + mobile", "Outro"]
     with open(P("brag-output", "work", "chapters.json"), "w", encoding="utf-8") as f:
         json.dump({"total": round(total, 2),
                    "chapters": [{"t": round(s, 2), "title": chap_titles[i]}

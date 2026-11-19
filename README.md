@@ -30,7 +30,7 @@ Browser ─► Node/Express server ─► Python worker (PDF + OCR: PyMuPDF)
 > **Quick Windows guide:** [HOW_TO_RUN.md](HOW_TO_RUN.md) — setup, keys, Ollama, large PDFs and troubleshooting on one page.
 
 **Video guides:** [Setup, code-flow deep dive and AWS deploy](brag-output/video-guide.md) (Hinglish audio) — MP4 downloads, chapter timestamps and copy-paste commands.
-**Prototype + technology film (English audio):** [prototype-tech-video.mp4](brag-output/prototype-tech-video.mp4) — 3:22, real app screenshots, architecture, the AI fallback chain, every library and model, and the five open-source repositories behind the build. English + Hinglish subtitle tracks. The presentable stack document is [docs/Prototype_Technology_Stack.docx](docs/Prototype_Technology_Stack.docx).
+**Prototype + technology film (English audio):** [prototype-tech-video.mp4](brag-output/prototype-tech-video.mp4) — 3:00, real app screenshots, architecture, the AI fallback chain, every library and model, and the verified results of this run. English + Hinglish subtitle tracks. The presentable stack document is [docs/Prototype_Technology_Stack.docx](docs/Prototype_Technology_Stack.docx).
 
 ### These two must be installed first
 - **Node.js 20.19+** — https://nodejs.org
