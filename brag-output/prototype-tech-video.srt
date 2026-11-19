@@ -267,26 +267,26 @@ And a complete Docker plus EC2 deployment guide
 ships in the repository.
 
 68
-00:03:08,550 --> 00:03:09,374
+00:03:08,550 --> 00:03:10,241
 Setup is one command.
 
 69
-00:03:09,374 --> 00:03:10,119
+00:03:10,241 --> 00:03:11,771
 Run is one command.
 
 70
-00:03:10,119 --> 00:03:11,060
+00:03:11,771 --> 00:03:13,703
 Then drop a PDF and ask.
 
 71
-00:03:11,060 --> 00:03:12,707
+00:03:13,703 --> 00:03:17,085
 The full guide, the Word documents and the
 
 72
-00:03:12,707 --> 00:03:13,766
+00:03:17,085 --> 00:03:19,260
 code are in the repository.
 
 73
-00:03:13,766 --> 00:03:14,550
+00:03:19,260 --> 00:03:20,870
 Thanks for watching.
 

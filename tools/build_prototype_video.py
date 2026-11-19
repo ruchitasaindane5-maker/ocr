@@ -190,15 +190,25 @@ def sc_title():
     return img
 
 
-def sc_shot(img_file, kicker, title, bullets=(), focus=(0.5, 0.5)):
-    """Real app screenshot on the left, a 'what to notice' panel on the right."""
+def sc_shot(img_file, kicker, title, bullets=(), focus=(0.5, 0.5), extra=None):
+    """Real app screenshot on the left, a 'what to notice' panel on the right.
+
+    `extra` adds a second (usually portrait) screenshot beside the main one —
+    used by the data scene to show the phone layout next to the desktop app.
+    """
     img = BG.copy()
     header(img, kicker, title)
-    max_w, max_h = 1204, 742
-    card = card_rgba(os.path.join(SHOTS, img_file), max_w, max_h, 1.0)
-    cx, cy = 96 + max_w / 2, 205 + max_h / 2
-    paste_center(img, card, cx, cy)
     d = ImageDraw.Draw(img)
+    if extra:
+        main_w, main_h = 880, 556
+        card = card_rgba(os.path.join(SHOTS, img_file), main_w, main_h, 1.0)
+        paste_center(img, card, 96 + main_w / 2, 576)
+        ex = card_rgba(os.path.join(SHOTS, extra), 300, 660, 1.0)
+        paste_center(img, ex, 1046 + ex.width / 2, 576)
+    else:
+        max_w, max_h = 1204, 742
+        card = card_rgba(os.path.join(SHOTS, img_file), max_w, max_h, 1.0)
+        paste_center(img, card, 96 + max_w / 2, 205 + max_h / 2)
     x = 1340
     d.text((x, 268), "WHAT TO NOTICE", font=F_CHIP, fill=ACC)
     d.line((x, 308, 1824, 308), fill=LINE, width=1)
@@ -495,7 +505,7 @@ def main():
             img, f = sc_title(), (0.5, 0.5)
         elif k == "shot":
             img, f = sc_shot(sc["img"], sc.get("kicker", "THE APP"), sc.get("title", ""),
-                             bullets=sc.get("bullets", ()))
+                             bullets=sc.get("bullets", ()), extra=sc.get("extra"))
         elif k == "diagram":
             f = (0.5, 0.5)
             img = {"architecture": sc_arch, "aichain": sc_ai, "stack": sc_stack}[sc["diagram"]]()

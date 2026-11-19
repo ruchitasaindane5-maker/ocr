@@ -19,10 +19,10 @@
 | 6 | AI chain | five provider cards + fallback | Ollama → GLM → NVIDIA → OpenRouter → Gemini | 21 s |
 | 7 | Stack | five library/model groups | exact versions and model ids | 34 s |
 | 8 | Open source | five repo cards | the five repositories behind the film | 21 s |
-| 9 | Your data | `42_view_data.png` + notice panel | view / export / delete / mobile | 16 s |
-| 10 | Outro | command card | setup one command, run one command | 7 s |
+| 9 | Your data | `42_view_data.png` + `44_mobile.png` + notice panel | view / export / delete / mobile | 16 s |
+| 10 | Outro | command card + narration | setup one command, run one command | 12 s |
 
-**Total:** 195 s (3:15). Every cut is snapped to the 0.5 s beat grid of the 120 BPM track.
+**Total:** 202 s (3:22). Every cut is snapped to the 0.5 s beat grid of the 120 BPM track.
 
 ## Creative laws applied
 
