@@ -191,7 +191,7 @@ def main():
     r.font.color.rgb = ACCENT
     p = doc.add_paragraph()
     p.alignment = WD_ALIGN_PARAGRAPH.CENTER
-    r = p.add_run("Technology · Libraries · Models · AI\nand the five open-source repositories behind the prototype video")
+    r = p.add_run("Technology · Libraries · Models · AI")
     r.font.size = Pt(12)
     r.font.color.rgb = GREY
     p = doc.add_paragraph()
@@ -305,28 +305,8 @@ def main():
            ["chunks_fts", "text, doc_id, page_no, chunk_id", "FTS5 virtual table, created with raw SQL on boot"]],
           widths=[1.1, 3.9, 2.4])
 
-    # ---------------- 7 repos
-    h1(doc, "8. The five repositories behind this prototype video")
-    para(doc, "The video and this document were produced with the same open-source tooling the project itself uses. "
-              "Each repository contributed a real piece of the pipeline.")
-    table(doc,
-          ["Repository", "Role in this prototype", "What was used"],
-          [["latent-spaces/brag", "Storyboard, music, sound effects",
-            "The /brag-slim creative laws (hook → reveal → highlights → punchline, cuts on the beat grid), the CC BY 4.0 Ende.app track and Kenney SFX"],
-           ["Moh4696/cinematic-skill", "Cinematic look, beats, captions",
-            "The one-hero-per-line camera rules, the beat table and its chronology/line-length lint, and the caption chunking style"],
-           ["debpalash/VoiceStudio", "Voice and audio quality",
-            "Open-source local ElevenLabs alternative; its loudness/quality analysis and voice-over mixing approach shaped the narration master"],
-           ["k2-fsa/OmniVoice", "Speech design",
-            "600+ language zero-shot TTS; its punctuation-aware text chunking was used for the subtitle timing"],
-           ["microsoft/playwright-mcp", "Real screenshots",
-            "Headless Chromium automation that captured every application screenshot in this document and the video"]],
-          widths=[1.7, 1.9, 3.6])
-    para(doc, "Note: GitHub's static-asset CDN was unreachable from the build sandbox, so the repository pages themselves "
-              "could not be screenshotted; the repository segment of the video uses designed cards instead.", italic=True, size=9.5, color=GREY)
-
     # ---------------- 8 video pipeline
-    h1(doc, "9. How the video was made")
+    h1(doc, "8. How the video was made")
     table(doc,
           ["Stage", "Tool", "Detail"],
           [["Capture", "Playwright MCP + headless Chromium", "1440×900 CSS at 2× device scale, live app"],
@@ -339,7 +319,7 @@ def main():
           widths=[1.3, 2.4, 3.5])
 
     # ---------------- 9 run
-    h1(doc, "10. Running it")
+    h1(doc, "9. Running it")
     para(doc, "One-time setup, then one command to run:")
     for c in ["bash setup.sh          # Windows: setup.bat",
               "npm start              # http://localhost:8000",
@@ -353,7 +333,7 @@ def main():
     para(doc, "Guides in the repository: HOW_TO_RUN.md, AWS_DEPLOY.md and the Word guides in docs/ (English and Hinglish).", space=10)
 
     # ---------------- 10 test results
-    h1(doc, "11. Verified in this build")
+    h1(doc, "10. Verified in this build")
     table(doc,
           ["Check", "Result"],
           [["Two real PDFs uploaded", "7 + 8 pages, 15 pages saved, 25 search chunks"],

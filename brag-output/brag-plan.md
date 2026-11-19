@@ -44,4 +44,4 @@ The five-repositories credit scene was cut on request — the film stays product
 - `prototype-tech-video.mp4` — 1920×1080, 30 fps, AAC stereo, English + Hinglish subtitle tracks
 - `prototype-tech-video.jpg` — poster (also frame 0 of the video)
 - `prototype-tech-video.srt` — English captions
-- `docs/Prototype_Technology_Stack.docx` — the presentable Word document (technology, libraries, models, AI, the five repositories, verified results)
+- `docs/Prototype_Technology_Stack.docx` — the presentable Word document (technology, libraries, models, AI, verified results)
