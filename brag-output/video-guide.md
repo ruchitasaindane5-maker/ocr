@@ -1,10 +1,14 @@
 # PDF Q&A: setup, code flow, and AWS deployment
 
-Three 1080p videos with feminine Hinglish narration, chapter markers, and a selectable Hindi subtitle track. The demo uses a synthetic two-page, image-only coffee guide: RapidOCR extracts both pages and a database-only query returns **92°C from page 2**. The app is run locally for the demo; no EC2 resources were created.
+Three 1080p videos with feminine Hinglish narration and a selectable subtitle track. The app is run locally for the demos; no EC2 resources were created.
+
+**Start here (updated November 2026)** is rebuilt from real screenshots of the current app with two scanned Hitachi Zosen MAN B&W engine instruction books loaded (960 + 663 pages, ~15 lakh characters after OCR). It shows the one-time setup, live OCR progress on a large scan, the five-provider AI chain with its live key test (one provider rate-limited, the rest answering), a cited answer from page 11 with its sources, viewing/exporting/deleting data, the mobile layout and the AWS deploy path. Hinglish subtitles are burned in and also included as a separate track. Voice: Microsoft Edge neural TTS (hi-IN-SwaraNeural); the background pad is synthesized, no third-party music.
+
+The code-flow deep dive and the AWS deploy video were recorded earlier: their demo uses a synthetic two-page, image-only coffee guide (RapidOCR extracts both pages and a database-only query returns **92°C from page 2**), and the UI they show predates the English interface and the OpenRouter provider.
 
 | Video | File | Length |
 | --- | --- | ---: |
-| Start here: setup, upload a scan, ask and export | [brag.mp4](./brag.mp4) | 1:22 |
+| Start here: setup, upload a large scan, ask, verify and manage (updated) | [brag.mp4](./brag.mp4) | 2:44 |
 | Code-flow deep dive | [code-flow-deep-dive.mp4](./code-flow-deep-dive.mp4) | 6:18 |
 | Local install to Docker on AWS EC2 | [full-setup-deploy.mp4](./full-setup-deploy.mp4) | 4:45 |
 

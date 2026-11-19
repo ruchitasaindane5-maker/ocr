@@ -35,7 +35,8 @@
   @media(min-width:760px){header .sub{width:auto;margin:0}}
   .sp{flex:1}
   .badge{font-size:12px;padding:5px 11px;border-radius:99px;background:var(--card2);border:1px solid var(--line);
-    display:inline-flex;gap:6px;align-items:center;white-space:nowrap}
+    display:inline-flex;gap:6px;align-items:center;white-space:nowrap;max-width:100%;min-width:0}
+  .badge > span:last-child{overflow:hidden;text-overflow:ellipsis} /* long AI chain: "…" instead of side-scroll */
   .dot{width:8px;height:8px;border-radius:99px;background:var(--warn);flex:none}
   .dot.on{background:var(--ok);box-shadow:0 0 8px var(--ok)} .dot.off{background:var(--err)}
 
@@ -157,7 +158,9 @@
   #scrollDown.show{opacity:1;pointer-events:auto;transform:none}
   #askHint{margin-top:7px;font-size:11.5px;color:#6d7c9c}
   @media(max-width:640px){ #q{font-size:16px} } /* prevents focus-zoom on iOS */
-  @media(max-width:900px){ #chatCard{position:relative} } /* anchor for the floating button */
+  /* anchor for the floating button; top:auto undoes the desktop sticky offset,
+     which otherwise pushed the card 76px down over the next section */
+  @media(max-width:900px){ #chatCard{position:relative;top:auto} }
 
   /* Doc card: lighter second row for downloads */
   .doc .exp{display:flex;gap:6px;align-items:center;margin-top:7px;flex-wrap:wrap}
@@ -328,7 +331,8 @@ $('#testAiBtn').onclick=async(e)=>{
 };
 
 /* ---------- Documents ---------- */
-const SUGGESTIONS=['How is a UPI QR created?','What are the GTM Command Center steps?','How do I set up the WhatsApp Cloud API?'];
+// Generic on purpose — they must make sense for whatever PDFs are in the database
+const SUGGESTIONS=['What is this document about?','Summarize the main topics','Which page covers safety precautions?'];
 function docCard(d){
   const el=document.createElement('div'); el.className='doc';
   el.innerHTML=`<div class="nm">📄 <span></span></div>
