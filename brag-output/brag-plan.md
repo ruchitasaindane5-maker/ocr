@@ -16,13 +16,14 @@
 | 3 | Upload + OCR | `26_ocr_progress_full.png` | drag & drop, local RapidOCR, live progress | 17 s |
 | 4 | Ask | `40_answer_full.png` | answer carries its source (file, page, score) | 15 s |
 | 5 | Architecture | drawn board | ingest path + query path | 24 s |
-| 6 | AI chain | five provider cards + fallback | Ollama → GLM → NVIDIA → OpenRouter → Gemini | 21 s |
+| 6 | AI chain | five provider rows + fallback, real in-app key test beside | Ollama → GLM → NVIDIA → OpenRouter → Gemini | 21 s |
 | 7 | Stack | five library/model groups | exact versions and model ids | 34 s |
 | 8 | Open source | five repo cards | the five repositories behind the film | 21 s |
 | 9 | Your data | `42_view_data.png` + `44_mobile.png` + notice panel | view / export / delete / mobile | 16 s |
 | 10 | Outro | command card + narration | setup one command, run one command | 12 s |
 
-**Total:** 202 s (3:22). Every cut is snapped to the 0.5 s beat grid of the 120 BPM track.
+**Total:** 201 s (3:21). Every cut is snapped to the 0.5 s beat grid of the 120 BPM track.
+**Subtitles:** two selectable tracks — English (`prototype-tech-video.srt`) and Hinglish (`prototype-tech-video.hi.srt`).
 
 ## Creative laws applied
 
@@ -40,7 +41,7 @@
 
 ## Deliverables
 
-- `prototype-tech-video.mp4` — 1920×1080, 30 fps, AAC stereo, English subtitle track
+- `prototype-tech-video.mp4` — 1920×1080, 30 fps, AAC stereo, English + Hinglish subtitle tracks
 - `prototype-tech-video.jpg` — poster (also frame 0 of the video)
 - `prototype-tech-video.srt` — English captions
 - `docs/Prototype_Technology_Stack.docx` — the presentable Word document (technology, libraries, models, AI, the five repositories, verified results)

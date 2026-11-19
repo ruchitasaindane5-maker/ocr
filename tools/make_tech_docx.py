@@ -229,8 +229,22 @@ def main():
     shot(doc, "43_delete_confirm.png", "Delete always asks for confirmation first.")
     shot(doc, "44_mobile.png", "The same application at a 390-pixel phone width.", width=3.2)
 
+    # ---------------- video chapters
+    chap_path = P("brag-output", "work", "chapters.json")
+    if os.path.exists(chap_path):
+        import json
+        ch = json.load(open(chap_path, encoding="utf-8"))
+        h1(doc, "3. Video chapters")
+        para(doc, "The film is 1920x1080 at 30 fps with a selectable English subtitle track and a "
+                  "second Hinglish subtitle track.", size=10)
+        def mmss(x):
+            return f"{int(x // 60)}:{int(x % 60):02d}"
+        rows = [[mmss(c["t"]), c["title"]] for c in ch["chapters"]]
+        rows.append(["", f"end - {mmss(ch['total'])}"])
+        table(doc, ["Time", "Chapter"], rows, widths=[1.0, 5.2])
+
     # ---------------- 3 architecture
-    h1(doc, "3. Architecture")
+    h1(doc, "4. Architecture")
     para(doc, "A Node/Express server owns the API and the database. Heavy document work is delegated to a Python worker "
               "process, which writes a JSON result back. Questions run a database search first and only then the AI chain.")
     doc.add_picture(ARCH, width=Inches(6.4))
@@ -248,7 +262,7 @@ def main():
     bullet(doc, "server/ai.ts: the five-provider fallback chain; on total failure the database answer is returned.")
 
     # ---------------- 4 tech & libraries
-    h1(doc, "4. Technology and libraries")
+    h1(doc, "5. Technology and libraries")
     table(doc,
           ["Layer", "Technology", "Version / detail"],
           [["Server", "Node.js + Express", "Node 20.19+ · Express 4 · TypeScript via tsx"],
@@ -266,7 +280,7 @@ def main():
           widths=[1.5, 2.1, 3.2])
 
     # ---------------- 5 AI models
-    h1(doc, "5. AI models and the fallback chain")
+    h1(doc, "6. AI models and the fallback chain")
     para(doc, "Keys are optional and come only from .env. Ollama needs no key and no internet. Each provider is tried in "
               "order; a failure (down, bad key, rate limit, timeout) falls through to the next one.")
     table(doc,
@@ -281,7 +295,7 @@ def main():
               "app always answers. AI_MODE=off disables the chain entirely.", italic=True, size=10)
 
     # ---------------- 6 data model
-    h1(doc, "6. Data model (Prisma)")
+    h1(doc, "7. Data model (Prisma)")
     table(doc,
           ["Model", "Fields", "Notes"],
           [["Document", "id, name, sha256, file_size, page_count, total_chars, ocr_engine, ocr_pages, tables_found, metadata, stored_file, created_at",
@@ -292,7 +306,7 @@ def main():
           widths=[1.1, 3.9, 2.4])
 
     # ---------------- 7 repos
-    h1(doc, "7. The five repositories behind this prototype video")
+    h1(doc, "8. The five repositories behind this prototype video")
     para(doc, "The video and this document were produced with the same open-source tooling the project itself uses. "
               "Each repository contributed a real piece of the pipeline.")
     table(doc,
@@ -312,7 +326,7 @@ def main():
               "could not be screenshotted; the repository segment of the video uses designed cards instead.", italic=True, size=9.5, color=GREY)
 
     # ---------------- 8 video pipeline
-    h1(doc, "8. How the video was made")
+    h1(doc, "9. How the video was made")
     table(doc,
           ["Stage", "Tool", "Detail"],
           [["Capture", "Playwright MCP + headless Chromium", "1440×900 CSS at 2× device scale, live app"],
@@ -320,12 +334,12 @@ def main():
            ["Music", "Ende.app — Happy Beats / Business Moves Vol. 1", "CC BY 4.0 · looped with a crossfade"],
            ["Sound effects", "Kenney (via brag)", "soft impacts on scene cuts"],
            ["Mix", "FFmpeg + NumPy", "voice-over ducked against the music bed, loudness-normalised"],
-           ["Captions", "punctuation-aware chunks", "burned in, plus a separate English SRT track"],
+           ["Captions", "punctuation-aware chunks", "burned in, plus English and Hinglish SRT tracks"],
            ["Render", "FFmpeg + libx264", "1920×1080 · 30 fps · CRF 19 · faststart"]],
           widths=[1.3, 2.4, 3.5])
 
     # ---------------- 9 run
-    h1(doc, "9. Running it")
+    h1(doc, "10. Running it")
     para(doc, "One-time setup, then one command to run:")
     for c in ["bash setup.sh          # Windows: setup.bat",
               "npm start              # http://localhost:8000",
@@ -339,7 +353,7 @@ def main():
     para(doc, "Guides in the repository: HOW_TO_RUN.md, AWS_DEPLOY.md and the Word guides in docs/ (English and Hinglish).", space=10)
 
     # ---------------- 10 test results
-    h1(doc, "10. Verified in this build")
+    h1(doc, "11. Verified in this build")
     table(doc,
           ["Check", "Result"],
           [["Two real PDFs uploaded", "7 + 8 pages, 15 pages saved, 25 search chunks"],

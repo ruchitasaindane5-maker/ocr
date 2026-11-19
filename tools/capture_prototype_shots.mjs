@@ -19,7 +19,10 @@ import { spawn, execFile } from 'node:child_process';
 import path from 'node:path';
 import fs from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import Chromium from '@sparticuz/chromium';
+import { pathToFileURL } from 'node:url';
+const { default: Chromium } = await import(pathToFileURL(path.join(
+  path.resolve(process.argv[2] || path.join(process.cwd(), 'brag-output', 'work', 'browser')),
+  'node_modules', '@sparticuz', 'chromium', 'build', 'index.js')).href);
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const BROWSER = path.resolve(process.argv[2] || path.join(here, '..', 'brag-output', 'work', 'browser'));
@@ -97,7 +100,7 @@ if (fs.existsSync(sample)) {
   const up = execFile('curl', ['-s', '-m', '900', '-F', `files=@${sample}`, 'http://localhost:8000/api/upload'], { cwd: REPO, maxBuffer: 1 << 24 });
   let out = ''; up.stdout.on('data', (d) => { out += d; });
   await new Promise((r) => setTimeout(r, 9000));
-  await shot('25_ocr_progress_full.png');
+  await shot('26_ocr_progress_full.png');
   console.log('progress:', JSON.stringify(await getJSON('http://localhost:8000/api/progress').catch(() => null)));
   await new Promise((r) => up.on('close', r));
   const docs = await getJSON('http://localhost:8000/api/docs');

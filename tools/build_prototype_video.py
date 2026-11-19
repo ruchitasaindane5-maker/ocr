@@ -33,7 +33,7 @@ def P(*a): return os.path.join(ROOT, *a)
 SHOTS = P("brag-output", "work", "shots_app")
 WORK = P("brag-output", "work", "video")
 AUDIO = P("brag-output", "work", "audio")
-NARR = P("brag-output", "work", "narration.json")
+NARR = P("tools", "prototype-narration.json")
 BRAG = P("brag-output", "work", "repos", "brag", "skills", "brag", "assets")
 MUSIC = os.path.join(BRAG, "music", "happy-beats-business-moves-vol-1-by-ende-dot-app.mp3")
 OUT = P("brag-output", "prototype-tech-video.mp4")
@@ -258,7 +258,8 @@ def sc_arch():
     return img
 
 
-def sc_ai():
+def sc_ai(img_file=None):
+    """The five-provider chain on the left, the real in-app key test on the right."""
     img = BG.copy()
     header(img, "THE AI FALLBACK CHAIN", "Five providers. If one fails, the next answers.")
     d = ImageDraw.Draw(img)
@@ -267,25 +268,28 @@ def sc_ai():
              ("3 · NVIDIA NIM", "build.nvidia.com", "nemotron-3.5-lightning-30b-a3b", ACC),
              ("4 · OpenRouter", "openrouter.ai", "nemotron-3.5-lightning:free", ACC),
              ("5 · Gemini", "aistudio.google.com", "gemini-flash-lite-latest", ACC)]
-    bw, bh, gap = 300, 210, 44
-    x0 = (W - (5 * bw + 4 * gap)) / 2
-    yy = 330
+    bw, bh, gap = 1050, 88, 20
+    x, yy = 96, 250
     for i, (t, s, m, c) in enumerate(provs):
-        x = x0 + i * (bw + gap)
-        box(d, (x, yy), (bw, bh), (19, 28, 52), LINE, 20)
-        d.rectangle((x, yy, x + bw, yy + 8), fill=c)
-        d.text((x + 26, yy + 34), t, font=F_BODY, fill=TXT)
-        d.text((x + 26, yy + 80), s, font=F_SMALL, fill=MUT)
-        d.text((x + 26, yy + 118), m, font=F_MONO_S, fill=ACC)
+        box(d, (x, yy), (bw, bh), (19, 28, 52), LINE, 16)
+        d.rectangle((x, yy, x + 8, yy + bh), fill=c)
+        d.text((x + 28, yy + 16), t, font=F_BODY, fill=TXT)
+        d.text((x + 28, yy + 54), s, font=F_SMALL, fill=MUT)
+        d.text((x + 420, yy + 54), m, font=F_MONO_S, fill=ACC)
         if i < len(provs) - 1:
-            arrow(d, x + bw + 6, yy + bh / 2, x + bw + gap - 6, yy + bh / 2, ACC, 5)
-    y2 = 640
-    box(d, (x0, y2), (W - 2 * x0, 150), (16, 46, 40), OK, 20)
-    d.text((x0 + 34, y2 + 28), "Every provider failed?", font=F_BODY, fill=OK)
-    d.text((x0 + 34, y2 + 72), "The database answer still comes back — passage, page number and score.",
-           font=F_SMALL, fill=TXT)
-    arrow(d, x0 + 40, yy + bh + 6, x0 + 60, y2 - 6, OK, 5)
-    d.text((x0 + 120, y2 + 170), "The system never stops.", font=F_SUB, fill=TXT)
+            arrow(d, x + bw - 60, yy + bh + 2, x + bw - 60, yy + bh + gap - 2, LINE, 3)
+        yy += bh + gap
+    box(d, (x, yy), (bw, bh), (16, 46, 40), OK, 16)
+    d.rectangle((x, yy, x + 8, yy + bh), fill=OK)
+    d.text((x + 28, yy + 16), "Sab fail?", font=F_BODY, fill=OK)
+    d.text((x + 28, yy + 54), "Database answer wapas aata hai — passage, page number aur score.", font=F_SMALL, fill=TXT)
+
+    if img_file and os.path.exists(os.path.join(SHOTS, img_file)):
+        d.text((1180, 200), "LIVE KEY TEST — THIS RUN", font=F_CHIP, fill=ACC)
+        card = card_rgba(os.path.join(SHOTS, img_file), 360, 742, 1.0)
+        paste_center(img, card, 1180 + (1824 - 1180) / 2, 236 + 742 / 2)
+        d.text((1180, 990), "No keys in this run — the chain falls through to the database answer.",
+               font=F_REPO_S, fill=MUT)
     return img
 
 
@@ -375,8 +379,21 @@ def decode(path, sr=SR):
     return np.frombuffer(raw, dtype=np.float32)
 
 
+def ensure_brag_assets():
+    """The music and SFX are brag's bundled assets (CC BY 4.0 / Kenney)."""
+    if os.path.exists(MUSIC):
+        return
+    dest = os.path.dirname(os.path.dirname(BRAG))          # .../work/repos
+    os.makedirs(dest, exist_ok=True)
+    print("fetching brag assets (music + SFX)…")
+    subprocess.run(["git", "clone", "--depth", "1", "-q",
+                    "https://github.com/latent-spaces/brag.git",
+                    os.path.join(dest, "brag")], check=True)
+
+
 def music_bed(n):
     """brag's CC BY 4.0 track, looped with a short crossfade to fill n samples."""
+    ensure_brag_assets()
     track = decode(MUSIC)
     if len(track) >= n:
         return track[:n]
@@ -431,6 +448,14 @@ def main():
     durs = [starts[i + 1] - starts[i] if i + 1 < len(starts) else d for i, d in enumerate(durs)]
     total = starts[-1] + durs[-1]
     print(f"scenes={len(scenes)} total={total:.1f}s")
+    # chapter list for the Word document / video guide
+    chap_titles = ["Hook — the problem", "The application", "Upload + live OCR", "Ask + sources",
+                   "Architecture", "AI fallback chain", "Libraries and models",
+                   "The five repositories", "Your data + mobile", "Outro"]
+    with open(P("brag-output", "work", "chapters.json"), "w", encoding="utf-8") as f:
+        json.dump({"total": round(total, 2),
+                   "chapters": [{"t": round(s, 2), "title": chap_titles[i]}
+                                for i, s in enumerate(starts)]}, f, indent=1)
 
     nS = int(math.ceil(total * SR)) + SR
     voice = np.zeros(nS, dtype=np.float32)
@@ -455,10 +480,8 @@ def main():
     mix.tofile(wav)
 
     # ---------------- subtitles (punctuation-aware chunks, OmniVoice style)
-    cues = []
-    for i, sc in enumerate(scenes):
-        parts = [p.strip() for p in re.split(r"(?<=[.!?;:])\s+", sc["text"]) if p.strip()]
-        # split long sentences so no cue is longer than ~9 words
+    def chunk_text(text):
+        parts = [p.strip() for p in re.split(r"(?<=[.!?;:])\s+", text) if p.strip()]
         chunks = []
         for p in parts:
             words = p.split()
@@ -467,21 +490,36 @@ def main():
             else:
                 for j in range(0, len(words), 8):
                     chunks.append(" ".join(words[j:j + 8]))
-        vd = len(vos[i]) / SR
-        tot = sum(len(p) for p in chunks)
-        t0 = starts[i] + LEAD
-        for p in chunks:
-            t1 = t0 + vd * len(p) / tot
-            cues.append((t0, t1, p))
-            t0 = t1
+        return chunks
+
+    def build_cues(key):
+        out = []
+        for i, sc in enumerate(scenes):
+            vd = len(vos[i]) / SR
+            chunks = chunk_text(sc[key])
+            tot = sum(len(p) for p in chunks)
+            t0 = starts[i] + LEAD
+            for p in chunks:
+                t1 = t0 + vd * len(p) / tot
+                out.append((t0, t1, p))
+                t0 = t1
+        return out
 
     def ts(s):
         ms = int(round(s * 1000))
         return f"{ms // 3600000:02d}:{ms // 60000 % 60:02d}:{ms // 1000 % 60:02d},{ms % 1000:03d}"
-    with open(SRT, "w", encoding="utf-8") as f:
-        for i, (a, b, p) in enumerate(cues, 1):
-            f.write(f"{i}\n{ts(a)} --> {ts(min(b, total))}\n{p}\n\n")
-    print("srt cues:", len(cues))
+
+    def write_srt(cues, path):
+        with open(path, "w", encoding="utf-8") as f:
+            for i, (a, b, p) in enumerate(cues, 1):
+                f.write(f"{i}\n{ts(a)} --> {ts(min(b, total))}\n{p}\n\n")
+        print("srt:", os.path.basename(path), len(cues), "cues")
+
+    cues = build_cues("text")
+    write_srt(cues, SRT)
+    SRT_HI = P("brag-output", "prototype-tech-video.hi.srt")
+    if any(sc.get("hi") for sc in scenes):
+        write_srt(build_cues("hi"), SRT_HI)
 
     dd = ImageDraw.Draw(Image.new("RGB", (10, 10)))
     cap_imgs = []
@@ -508,7 +546,10 @@ def main():
                              bullets=sc.get("bullets", ()), extra=sc.get("extra"))
         elif k == "diagram":
             f = (0.5, 0.5)
-            img = {"architecture": sc_arch, "aichain": sc_ai, "stack": sc_stack}[sc["diagram"]]()
+            if sc["diagram"] == "aichain":
+                img = sc_ai(sc.get("img"))
+            else:
+                img = {"architecture": sc_arch, "stack": sc_stack}[sc["diagram"]]()
         elif k == "repos":
             img, f = sc_repos(), (0.5, 0.5)
         else:
@@ -521,13 +562,19 @@ def main():
     cmd = [FF, "-y", "-v", "error",
            "-f", "rawvideo", "-pix_fmt", "rgb24", "-s", f"{W}x{H}", "-r", str(FPS), "-i", "-",
            "-f", "f32le", "-ar", str(SR), "-ac", "1", "-i", wav,
-           "-i", SRT,
-           "-map", "0:v", "-map", "1:a", "-map", "2:s",
-           "-c:v", "libx264", "-preset", "medium", "-crf", "19", "-pix_fmt", "yuv420p",
-           "-c:a", "aac", "-b:a", "160k", "-ac", "2",
-           "-c:s", "mov_text", "-metadata:s:s:0", "language=eng", "-metadata:s:s:0", "title=English",
-           "-metadata", "title=PDF Q&A — Prototype Demo & Technology Deep Dive",
-           "-movflags", "+faststart", "-shortest", OUT]
+           "-i", SRT]
+    if os.path.exists(SRT_HI):
+        cmd += ["-i", SRT_HI]
+    cmd += ["-map", "0:v", "-map", "1:a", "-map", "2:s"]
+    if os.path.exists(SRT_HI):
+        cmd += ["-map", "3:s"]
+    cmd += ["-c:v", "libx264", "-preset", "medium", "-crf", "19", "-pix_fmt", "yuv420p",
+            "-c:a", "aac", "-b:a", "160k", "-ac", "2",
+            "-c:s", "mov_text", "-metadata:s:s:0", "language=eng", "-metadata:s:s:0", "title=English"]
+    if os.path.exists(SRT_HI):
+        cmd += ["-metadata:s:s:1", "language=hin", "-metadata:s:s:1", "title=Hinglish"]
+    cmd += ["-metadata", "title=PDF Q&A — Prototype Demo & Technology Deep Dive",
+            "-movflags", "+faststart", "-shortest", OUT]
     proc = subprocess.Popen(cmd, stdin=subprocess.PIPE)
     nframes = int(total * FPS)
     for f in range(nframes):

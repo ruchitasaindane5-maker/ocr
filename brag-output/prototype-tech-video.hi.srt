@@ -1,0 +1,276 @@
+1
+00:00:00,550 --> 00:00:03,816
+Scanned PDFs tasveerein hain, text nahi.
+
+2
+00:00:03,816 --> 00:00:07,245
+Do engine manuals, 1,623 pages, aur ek bhi
+
+3
+00:00:07,245 --> 00:00:09,123
+searchable akshar nahi.
+
+4
+00:00:09,123 --> 00:00:12,961
+Ek safety rule dhoondhne mein raat ho jati thi.
+
+5
+00:00:12,961 --> 00:00:16,390
+PDF Q and A yahi problem khatam karta hai.
+
+6
+00:00:18,050 --> 00:00:19,442
+Ye hai PDF Q and A.
+
+7
+00:00:19,442 --> 00:00:22,227
+Koi bhi PDF daalo, chahe 1,000 page ka
+
+8
+00:00:22,227 --> 00:00:25,305
+scanned manual ho, wo har page padhta hai,
+
+9
+00:00:25,305 --> 00:00:28,382
+sab kuch database mein save karta hai, aur
+
+10
+00:00:28,382 --> 00:00:31,460
+jawab deta hai exact page number ke saath.
+
+11
+00:00:31,460 --> 00:00:33,365
+No cloud, no subscription.
+
+12
+00:00:33,365 --> 00:00:35,930
+Tumhare apne machine pe chalta hai.
+
+13
+00:00:37,550 --> 00:00:40,378
+Upload karna hai drag and drop, ek saath
+
+14
+00:00:40,378 --> 00:00:41,297
+20 files tak.
+
+15
+00:00:41,297 --> 00:00:44,408
+Scanned pages Rapid OCR khud padhta hai, aur
+
+16
+00:00:44,408 --> 00:00:47,519
+tum dekhte raho har page database mein jaata
+
+17
+00:00:47,519 --> 00:00:47,802
+hai:
+
+18
+00:00:47,802 --> 00:00:50,418
+page number, percent, time remaining.
+
+19
+00:00:50,418 --> 00:00:53,670
+Kuch bhi tumhare computer se bahar nahi jaata.
+
+20
+00:00:55,550 --> 00:00:56,291
+Ab poocho.
+
+21
+00:00:56,291 --> 00:00:58,957
+Jawab aata hai apne source ke saath:
+
+22
+00:00:58,957 --> 00:01:02,143
+file ka naam, page number, aur match score.
+
+23
+00:01:02,143 --> 00:01:05,031
+Sources kholo aur tum dekh rahe ho wohi
+
+24
+00:01:05,031 --> 00:01:07,402
+passage jo database ne dhoondha.
+
+25
+00:01:07,402 --> 00:01:09,550
+Sab khud verify kar sakte ho.
+
+26
+00:01:11,050 --> 00:01:12,373
+Ye raha pipeline.
+
+27
+00:01:12,373 --> 00:01:15,563
+Browser baat karta hai Express server se.
+
+28
+00:01:15,563 --> 00:01:18,832
+Python worker text nikalta hai PyMuPDF se;
+
+29
+00:01:18,832 --> 00:01:21,944
+scanned pages jaati hain Rapid OCR mein.
+
+30
+00:01:21,944 --> 00:01:25,290
+Prisma har page aur chunk likhta hai SQLite
+
+31
+00:01:25,290 --> 00:01:28,092
+mein, FTS5 full-text index ke saath.
+
+32
+00:01:28,092 --> 00:01:31,827
+Sawaal pehle BM25 search chalata hai, phir jawab
+
+33
+00:01:31,827 --> 00:01:33,850
+banta hai top passages se.
+
+34
+00:01:35,550 --> 00:01:36,727
+Phir AI chain.
+
+35
+00:01:36,727 --> 00:01:40,509
+Ollama pehle, bilkul tumhare apne machine pe.
+
+36
+00:01:40,509 --> 00:01:44,291
+Phir GLM, NVIDIA NIM, OpenRouter, aur Gemini.
+
+37
+00:01:44,291 --> 00:01:47,990
+Ek provider fail hua to agla jawab deta hai.
+
+38
+00:01:47,990 --> 00:01:51,016
+Aur sab fail ho gaye to bhi database
+
+39
+00:01:51,016 --> 00:01:52,613
+ka jawab milta hai.
+
+40
+00:01:52,613 --> 00:01:54,630
+System kabhi rukta nahi.
+
+41
+00:01:56,050 --> 00:02:00,230
+Libraries aur models, bilkul jo ship hua hai.
+
+42
+00:02:00,230 --> 00:02:02,088
+Node 20 aur Express.
+
+43
+00:02:02,088 --> 00:02:05,153
+Prisma 7, libSQL driver ke saath.
+
+44
+00:02:05,153 --> 00:02:09,333
+SQLite, FTS5 index aur BM25 ranking ke saath.
+
+45
+00:02:09,333 --> 00:02:12,306
+Text aur layout ke liye PyMuPDF.
+
+46
+00:02:12,306 --> 00:02:14,814
+Rapid OCR, ONNX Runtime pe.
+
+47
+00:02:14,814 --> 00:02:18,437
+Ollama chalata hai Qwen 2.5 7B locally.
+
+48
+00:02:18,437 --> 00:02:19,552
+Cloud chain:
+
+49
+00:02:19,552 --> 00:02:24,846
+GLM 4.7 Flash, NVIDIA Nemotron 3.5 Lightning, OpenRouter,
+
+50
+00:02:24,846 --> 00:02:26,890
+aur Gemini Flash Lite.
+
+51
+00:02:28,550 --> 00:02:30,781
+Aur ye film bhi aise hi bani.
+
+52
+00:02:30,781 --> 00:02:34,398
+Brag ne di storyboard, music aur sound effects.
+
+53
+00:02:34,398 --> 00:02:38,014
+Cinematic Skill ne chalayi camera aur captions.
+
+54
+00:02:38,014 --> 00:02:40,861
+Voice Studio ne suara aur mix banaya.
+
+55
+00:02:40,861 --> 00:02:44,785
+OmniVoice ne guide kiya multilingual speech design.
+
+56
+00:02:44,785 --> 00:02:48,556
+Aur Playwright MCP ne liye saare real screenshots
+
+57
+00:02:48,556 --> 00:02:49,710
+jo aapne dekhe.
+
+58
+00:02:51,550 --> 00:02:53,761
+Tumhara data tumhara rehta hai.
+
+59
+00:02:53,761 --> 00:02:56,615
+Koi bhi page dekho, export karo TXT, CSV
+
+60
+00:02:56,615 --> 00:03:00,039
+ya JSON mein, delete karo confirmation ke saath.
+
+61
+00:03:00,039 --> 00:03:02,179
+Poora app chalta hai phone pe.
+
+62
+00:03:02,179 --> 00:03:05,532
+Aur repository mein milti hai poori Docker plus
+
+63
+00:03:05,532 --> 00:03:07,030
+EC2 deployment guide.
+
+64
+00:03:08,550 --> 00:03:10,327
+Setup ek command hai.
+
+65
+00:03:10,327 --> 00:03:11,936
+Run ek command hai.
+
+66
+00:03:11,936 --> 00:03:14,136
+Phir PDF daalo aur poocho.
+
+67
+00:03:14,136 --> 00:03:18,537
+Poori guide, Word documents aur code, sab repository
+
+68
+00:03:18,537 --> 00:03:19,299
+mein hai.
+
+69
+00:03:19,299 --> 00:03:20,230
+Dhanyavaad!
+
