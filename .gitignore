@@ -12,4 +12,5 @@ brag-output/*.mp4
 !brag-output/brag.mp4
 !brag-output/code-flow-deep-dive.mp4
 !brag-output/full-setup-deploy.mp4
+!brag-output/prototype-tech-video.mp4
 tests/failures/

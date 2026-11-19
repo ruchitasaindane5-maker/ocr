@@ -1,6 +1,8 @@
-# PDF Q&A: setup, code flow, and AWS deployment
+# PDF Q&A: prototype film, setup, code flow, and AWS deployment
 
-Three 1080p videos with feminine Hinglish narration and a selectable subtitle track. The app is run locally for the demos; no EC2 resources were created.
+**New — prototype & technology film (19 November 2026).** A 3:22 English-narration film that presents the prototype and then goes deep on the stack: live app screenshots (captured from the running server through Playwright MCP), the ingest/query architecture, the five-provider AI fallback chain, every library and model, the five open-source repositories behind the build, and the verified results of this run. Female neural voice, burned-in English captions plus a separate subtitle track, brag's CC BY 4.0 Ende.app track and Kenney SFX. The presentable Word document is [docs/Prototype_Technology_Stack.docx](../docs/Prototype_Technology_Stack.docx). See [brag-plan.md](./brag-plan.md) for the storyboard.
+
+The three earlier 1080p videos have feminine Hinglish narration and a selectable subtitle track. The app is run locally for the demos; no EC2 resources were created.
 
 **Start here (updated November 2026)** is rebuilt from real screenshots of the current app with two scanned Hitachi Zosen MAN B&W engine instruction books loaded (960 + 663 pages, ~15 lakh characters after OCR). It shows the one-time setup, live OCR progress on a large scan, the five-provider AI chain with its live key test (one provider rate-limited, the rest answering), a cited answer from page 11 with its sources, viewing/exporting/deleting data, the mobile layout and the AWS deploy path. Hinglish subtitles are burned in and also included as a separate track. Voice: Microsoft Edge neural TTS (hi-IN-SwaraNeural); the background pad is synthesized, no third-party music.
 
@@ -8,6 +10,7 @@ The code-flow deep dive and the AWS deploy video were recorded earlier: their de
 
 | Video | File | Length |
 | --- | --- | ---: |
+| Prototype demo & technology deep dive (English) | [prototype-tech-video.mp4](./prototype-tech-video.mp4) | 3:22 |
 | Start here: setup, upload a large scan, ask, verify and manage (updated) | [brag.mp4](./brag.mp4) | 2:44 |
 | Code-flow deep dive | [code-flow-deep-dive.mp4](./code-flow-deep-dive.mp4) | 6:18 |
 | Local install to Docker on AWS EC2 | [full-setup-deploy.mp4](./full-setup-deploy.mp4) | 4:45 |

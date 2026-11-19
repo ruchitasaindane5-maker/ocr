@@ -1,3 +1,5 @@
-Drop in a PDF, ask a question — get the answer with page numbers. 📄
-OCR for scanned/screenshot PDFs, saved in a Prisma database, and answers keep coming even if the AI fails (Ollama → GLM → NVIDIA → OpenRouter → Gemini).
-Full Setup → Run → Use guide: a 2-minute video + Word guides (Hinglish & English) are in the repo.
+Scanned PDFs are pictures, not text. PDF Q&A reads every page with OCR, stores it in SQLite through Prisma, and answers with the exact page number. 📄
+
+Prototype + technology film (3:22, English narration, real screenshots): architecture, the Ollama → GLM → NVIDIA → OpenRouter → Gemini fallback chain, every library and model, and the five open-source repositories behind the build.
+
+Word document with the full stack: docs/Prototype_Technology_Stack.docx

@@ -1,25 +1,46 @@
-# Brag Plan — PDF Q&A (Tutorial Edition)
+# Brag Plan — PDF Q&A prototype & technology film
 
-**Input:** Project (this repo) + live local app (http://localhost:8000)
-**Angle:** "Drop in any PDF → saved to the database → answers with page numbers"
-**Hook:** Promise in the first 5 seconds — answers even from scanned/screenshot PDFs, with page citations.
-**Tone:** default (punchy, friendly teacher-style)
-**Format:** landscape 1920×1080, slideshow of REAL app screenshots + terminal cards, Hindi voiceover (the user asked for it, so this tutorial cut is longer than the 20s brag rule)
-**Visual identity:** The app's own dark blue (#0b101d bg, #5b8cff→#7c5cff gradient), DejaVu titles.
+**Input:** this project + the live local app (`http://localhost:8000`), two real PDFs loaded
+**Angle:** "Scanned PDFs are pictures, not text — this system reads them, stores them and answers with the page number"
+**Hook (first 5 s):** 1,623 scanned pages, zero searchable characters — the problem, in three numbers
+**Tone:** `cinematic` / `app-store` mix — trailer-scale type, clean feature cards, cuts on the beat grid
+**Format:** landscape 1920×1080, 30 fps, English narration (female neural voice)
+**Visual identity:** the app's own dark navy (#0b0d1a → #101830), accent #7da2ff, DejaVu type — the real UI is always the hero
 
-## Storyboard (narration = Hindi voiceover)
+## Storyboard
 
-| # | Scene (visual) | Narration point | Est. |
-|---|---|---|---|
-| 1 | Title card (PIL) | Greeting + product promise | ~20s |
-| 2 | Terminal card: setup | bash setup.sh / setup.bat — one-command setup | ~20s |
-| 3 | 01_home.png | npm start → localhost:8000, screen tour | ~22s |
-| 4 | 02_upload.png | Drag-drop upload, auto OCR, DB save | ~24s |
-| 5 | 03_answer.png | Question → answer + Sources (page citation) | ~22s |
-| 6 | 05_ai_panel.png | Ollama → GLM → NVIDIA → Gemini fallback | ~26s |
-| 7 | 06_viewer.png | View data + TXT/CSV/JSON export, Prisma DB | ~20s |
-| 8 | Outro card | Summary commands + AWS_DEPLOY.md note | ~18s |
+| # | Scene | Visual | Narration point | Est. |
+|---|---|---|---|---|
+| 1 | Hook | title card, three real stats | scanned ≠ text, 1,623 pages, 0 characters | 18 s |
+| 2 | The app | `20_home_hidpi.png` + notice panel | what PDF Q&A is, one screen | 19 s |
+| 3 | Upload + OCR | `26_ocr_progress_full.png` | drag & drop, local RapidOCR, live progress | 17 s |
+| 4 | Ask | `40_answer_full.png` | answer carries its source (file, page, score) | 15 s |
+| 5 | Architecture | drawn board | ingest path + query path | 24 s |
+| 6 | AI chain | five provider cards + fallback | Ollama → GLM → NVIDIA → OpenRouter → Gemini | 21 s |
+| 7 | Stack | five library/model groups | exact versions and model ids | 34 s |
+| 8 | Open source | five repo cards | the five repositories behind the film | 21 s |
+| 9 | Your data | `42_view_data.png` + `44_mobile.png` + notice panel | view / export / delete / mobile | 16 s |
+| 10 | Outro | command card + narration | setup one command, run one command | 12 s |
 
-**Frames:** each scene = 1920×1080 dark canvas, scene-title band on top, the real screenshot in the middle (brag law: real UI, no fake visuals).
-**Poster:** scene 1 title card → brag.jpg, which is also frame 0 of the video.
-**Music/SFX:** no external assets available in the sandbox; the voiceover is the only track (so no tempo grid). Mention this in the final delivery.
+**Total:** 202 s (3:22). Every cut is snapped to the 0.5 s beat grid of the 120 BPM track.
+
+## Creative laws applied
+
+- **brag** (`latent-spaces/brag`, `/brag-slim`): hook first, show the real product (every screenshot is a live capture, no mockups), one idea per scene, readable type, poster = a settled frame.
+- **cinematic-skill** (`Moh4696/cinematic-skill`): one hero per line, the camera notices the hero ~0.3 s after it appears, captions as sentence chunks, chronology/line-length lint on the script.
+- **VoiceStudio** (`debpalash/VoiceStudio`): voice-over mixed against the music bed with ducking and loudness normalisation.
+- **OmniVoice** (`k2-fsa/OmniVoice`): punctuation-aware text chunking for the subtitle cues.
+- **playwright-mcp** (`microsoft/playwright-mcp`): every app screenshot captured from the running server through the MCP browser tools.
+
+## Sound
+
+- Music: **Happy Beats / Business Moves Vol. 1** by [Ende.app](https://ende.app/en), [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/) (bundled with brag), looped with a 1.5 s crossfade.
+- SFX: Kenney interface/impact effects (bundled with brag) on scene cuts.
+- Voice: one neural female voice, one clip per scene, ducked against the bed.
+
+## Deliverables
+
+- `prototype-tech-video.mp4` — 1920×1080, 30 fps, AAC stereo, English subtitle track
+- `prototype-tech-video.jpg` — poster (also frame 0 of the video)
+- `prototype-tech-video.srt` — English captions
+- `docs/Prototype_Technology_Stack.docx` — the presentable Word document (technology, libraries, models, AI, the five repositories, verified results)

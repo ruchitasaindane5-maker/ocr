@@ -1,0 +1,292 @@
+1
+00:00:00,550 --> 00:00:02,425
+Two instruction manuals.
+
+2
+00:00:02,425 --> 00:00:06,800
+One thousand six hundred and twenty-three scanned pages.
+
+3
+00:00:06,800 --> 00:00:09,768
+And not a single searchable character.
+
+4
+00:00:09,768 --> 00:00:13,362
+Finding one safety rule could take an evening.
+
+5
+00:00:13,362 --> 00:00:15,784
+This is the problem PDF Q and A
+
+6
+00:00:15,784 --> 00:00:17,190
+was built to kill.
+
+7
+00:00:19,050 --> 00:00:20,549
+This is PDF Q and A.
+
+8
+00:00:20,549 --> 00:00:23,921
+Drop in any PDF, even a thousand-page scanned
+
+9
+00:00:23,921 --> 00:00:27,593
+manual, and it reads every page, saves everything
+
+10
+00:00:27,593 --> 00:00:31,190
+into a database, and answers your questions with
+
+11
+00:00:31,190 --> 00:00:32,838
+the exact page number.
+
+12
+00:00:32,838 --> 00:00:33,513
+No cloud.
+
+13
+00:00:33,513 --> 00:00:34,712
+No subscription.
+
+14
+00:00:34,712 --> 00:00:36,810
+It runs on your own machine.
+
+15
+00:00:38,550 --> 00:00:41,440
+Uploading is drag and drop, up to twenty
+
+16
+00:00:41,440 --> 00:00:42,452
+files at once.
+
+17
+00:00:42,452 --> 00:00:45,631
+Scanned pages are read locally by Rapid OCR,
+
+18
+00:00:45,631 --> 00:00:48,233
+and you watch every page land in the
+
+19
+00:00:48,233 --> 00:00:49,244
+database live:
+
+20
+00:00:49,244 --> 00:00:52,135
+page number, percentage, time remaining.
+
+21
+00:00:52,135 --> 00:00:54,230
+Nothing leaves your computer.
+
+22
+00:00:56,050 --> 00:00:56,575
+Now ask.
+
+23
+00:00:56,575 --> 00:00:59,069
+The answer comes back with its source:
+
+24
+00:00:59,069 --> 00:01:01,497
+the file name, the page number, and a
+
+25
+00:01:01,497 --> 00:01:02,285
+match score.
+
+26
+00:01:02,285 --> 00:01:04,845
+Open the sources and you are looking at
+
+27
+00:01:04,845 --> 00:01:07,273
+the exact passage the database found.
+
+28
+00:01:07,273 --> 00:01:09,570
+You can verify everything yourself.
+
+29
+00:01:11,050 --> 00:01:12,630
+Here is the pipeline.
+
+30
+00:01:12,630 --> 00:01:15,565
+The browser talks to an Express server.
+
+31
+00:01:15,565 --> 00:01:18,801
+A Python worker extracts text with PyMuPDF;
+
+32
+00:01:18,801 --> 00:01:21,435
+scanned pages go through Rapid OCR.
+
+33
+00:01:21,435 --> 00:01:24,972
+Prisma writes every page and chunk into SQLite,
+
+34
+00:01:24,972 --> 00:01:27,154
+with an FTS5 full-text index.
+
+35
+00:01:27,154 --> 00:01:30,240
+A question runs a BM25 search first, then
+
+36
+00:01:30,240 --> 00:01:33,250
+builds the answer from the top passages.
+
+37
+00:01:35,050 --> 00:01:36,496
+Then the AI chain.
+
+38
+00:01:36,496 --> 00:01:40,352
+Ollama runs first, entirely on your own machine.
+
+39
+00:01:40,352 --> 00:01:43,967
+Then GLM, NVIDIA NIM, OpenRouter, and Gemini.
+
+40
+00:01:43,967 --> 00:01:47,502
+If one provider fails, the next one answers.
+
+41
+00:01:47,502 --> 00:01:50,876
+And if every provider fails, you still get
+
+42
+00:01:50,876 --> 00:01:52,482
+the database answer.
+
+43
+00:01:52,482 --> 00:01:54,330
+The system never stops.
+
+44
+00:01:56,050 --> 00:01:59,701
+Libraries and models, exactly as shipped.
+
+45
+00:01:59,701 --> 00:02:01,839
+Node twenty and Express.
+
+46
+00:02:01,839 --> 00:02:05,045
+Prisma seven with the libSQL driver.
+
+47
+00:02:05,045 --> 00:02:08,874
+SQLite with an FTS5 index and BM25 ranking.
+
+48
+00:02:08,874 --> 00:02:11,368
+PyMuPDF for text and layout.
+
+49
+00:02:11,368 --> 00:02:13,683
+Rapid OCR on ONNX Runtime.
+
+50
+00:02:13,683 --> 00:02:18,136
+Ollama runs Qwen two point five, seven B, locally.
+
+51
+00:02:18,136 --> 00:02:21,609
+The cloud chain is GLM four point seven
+
+52
+00:02:21,609 --> 00:02:27,131
+Flash, NVIDIA Nemotron three point five Lightning, OpenRouter,
+
+53
+00:02:27,131 --> 00:02:29,090
+and Gemini Flash Lite.
+
+54
+00:02:30,550 --> 00:02:33,028
+And this film was built the same way.
+
+55
+00:02:33,028 --> 00:02:36,176
+Brag supplied the storyboard, the music and the
+
+56
+00:02:36,176 --> 00:02:37,114
+sound effects.
+
+57
+00:02:37,114 --> 00:02:40,463
+Cinematic Skill drove the camera and the captions.
+
+58
+00:02:40,463 --> 00:02:43,276
+Voice Studio shaped the voice and the mix.
+
+59
+00:02:43,276 --> 00:02:46,558
+Omni Voice guided the multilingual speech design.
+
+60
+00:02:46,558 --> 00:02:49,840
+And Playwright MCP took every real screenshot you
+
+61
+00:02:49,840 --> 00:02:50,510
+have seen.
+
+62
+00:02:52,050 --> 00:02:53,733
+Your data stays yours.
+
+63
+00:02:53,733 --> 00:02:56,563
+View any page, export to text, CSV or
+
+64
+00:02:56,563 --> 00:02:59,088
+JSON, delete with a confirmation.
+
+65
+00:02:59,088 --> 00:03:01,459
+The whole app works on a phone.
+
+66
+00:03:01,459 --> 00:03:05,054
+And a complete Docker plus EC2 deployment guide
+
+67
+00:03:05,054 --> 00:03:06,890
+ships in the repository.
+
+68
+00:03:08,550 --> 00:03:10,241
+Setup is one command.
+
+69
+00:03:10,241 --> 00:03:11,771
+Run is one command.
+
+70
+00:03:11,771 --> 00:03:13,703
+Then drop a PDF and ask.
+
+71
+00:03:13,703 --> 00:03:17,085
+The full guide, the Word documents and the
+
+72
+00:03:17,085 --> 00:03:19,260
+code are in the repository.
+
+73
+00:03:19,260 --> 00:03:20,870
+Thanks for watching.
+
