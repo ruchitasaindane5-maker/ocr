@@ -1,6 +1,8 @@
 # PDF Q&A: prototype film, setup, code flow, and AWS deployment
 
-**New — prototype & technology film (19 November 2026).** A 3:22 English-narration film that presents the prototype and then goes deep on the stack: live app screenshots (captured from the running server through Playwright MCP), the ingest/query architecture, the five-provider AI fallback chain, every library and model, the five open-source repositories behind the build, and the verified results of this run. Female neural voice, burned-in English captions plus a separate subtitle track, brag's CC BY 4.0 Ende.app track and Kenney SFX. The presentable Word document is [docs/Prototype_Technology_Stack.docx](../docs/Prototype_Technology_Stack.docx). See [brag-plan.md](./brag-plan.md) for the storyboard.
+**New — prototype & technology film (19 November 2026).** A 3:21 English-narration film that presents the prototype and then goes deep on the stack: live app screenshots (captured from the running server through Playwright MCP), the ingest/query architecture, the five-provider AI fallback chain with the real in-app key test beside it, every library and model, the five open-source repositories behind the build, and the verified results of this run. Female neural voice, burned-in English captions plus **two selectable subtitle tracks (English and Hinglish)**, brag's CC BY 4.0 Ende.app track and Kenney SFX. The presentable Word document is [docs/Prototype_Technology_Stack.docx](../docs/Prototype_Technology_Stack.docx). See [brag-plan.md](./brag-plan.md) for the storyboard.
+
+Prototype film chapters: **0:00** hook · **0:17** the app · **0:37** upload + live OCR · **0:55** ask + sources · **1:10** architecture · **1:35** AI fallback chain · **1:55** libraries and models · **2:28** the five repositories · **2:51** your data + mobile · **3:08** outro.
 
 The three earlier 1080p videos have feminine Hinglish narration and a selectable subtitle track. The app is run locally for the demos; no EC2 resources were created.
 
@@ -10,7 +12,7 @@ The code-flow deep dive and the AWS deploy video were recorded earlier: their de
 
 | Video | File | Length |
 | --- | --- | ---: |
-| Prototype demo & technology deep dive (English) | [prototype-tech-video.mp4](./prototype-tech-video.mp4) | 3:22 |
+| Prototype demo & technology deep dive (English, EN + HI subtitles) | [prototype-tech-video.mp4](./prototype-tech-video.mp4) | 3:21 |
 | Start here: setup, upload a large scan, ask, verify and manage (updated) | [brag.mp4](./brag.mp4) | 2:44 |
 | Code-flow deep dive | [code-flow-deep-dive.mp4](./code-flow-deep-dive.mp4) | 6:18 |
 | Local install to Docker on AWS EC2 | [full-setup-deploy.mp4](./full-setup-deploy.mp4) | 4:45 |
