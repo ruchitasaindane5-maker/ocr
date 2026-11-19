@@ -325,35 +325,6 @@ def sc_stack():
     return img
 
 
-def sc_repos():
-    img = BG.copy()
-    header(img, "BUILT WITH THESE OPEN-SOURCE PROJECTS", "The five repositories behind this film")
-    d = ImageDraw.Draw(img)
-    repos = [
-        ("brag", "latent-spaces/brag", "Storyboard, music & SFX", "Launch-video skill. Supplied the CC BY 4.0 Ende.app track and the Kenney sound effects.", ACC),
-        ("cinematic-skill", "Moh4696/cinematic-skill", "Cinematic board & captions", "One-camera board rules, beat table and caption styles used for every scene.", ACC2),
-        ("VoiceStudio", "debpalash/VoiceStudio", "Voice & audio mix", "Open-source local ElevenLabs alternative; its quality analysis and mixing shaped the voice-over.", OK),
-        ("OmniVoice", "k2-fsa/OmniVoice", "Speech design", "600+ language zero-shot TTS; punctuation-aware chunking guided the subtitle timing.", WARN),
-        ("playwright-mcp", "microsoft/playwright-mcp", "Real screenshots", "Headless browser automation that captured every app screenshot in this film.", RUST),
-    ]
-    cw, ch, gap = 336, 560, 24
-    x0 = (W - (5 * cw + 4 * gap)) / 2
-    for i, (name, repo, role, desc, c) in enumerate(repos):
-        x = x0 + i * (cw + gap)
-        box(d, (x, 240), (cw, ch), (17, 26, 48), LINE, 20)
-        d.rectangle((x, 240, x + cw, 250), fill=c)
-        d.text((x + 24, 286), name, font=F_REPO, fill=TXT)
-        d.text((x + 24, 330), repo, font=F_MONO_S, fill=c)
-        d.text((x + 24, 378), role, font=F_REPO_B, fill=ACC)
-        yy = 424
-        for ln in wrap(desc, F_REPO_S, cw - 48, d):
-            d.text((x + 24, yy), ln, font=F_REPO_S, fill=MUT)
-            yy += 28
-        d.line((x + 24, 620, x + cw - 24, 620), fill=LINE, width=1)
-        d.text((x + 24, 646), "github.com", font=F_MONO_S, fill=MUT)
-    return img
-
-
 def sc_outro():
     img = BG.copy()
     d = ImageDraw.Draw(img)
@@ -550,8 +521,6 @@ def main():
                 img = sc_ai(sc.get("img"))
             else:
                 img = {"architecture": sc_arch, "stack": sc_stack}[sc["diagram"]]()
-        elif k == "repos":
-            img, f = sc_repos(), (0.5, 0.5)
         else:
             img, f = sc_outro(), (0.5, 0.5)
         layers.append(img)
