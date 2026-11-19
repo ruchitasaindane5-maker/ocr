@@ -3,43 +3,148 @@
   "language": "en-US",
   "voice_id": "voice-00",
   "scenes": [
-    {"id": 1, "kind": "title",
-     "text": "Two instruction manuals. One thousand six hundred and twenty-three scanned pages. And not a single searchable character. Finding one safety rule could take an evening. This is the problem PDF Q and A was built to kill.",
-     "hi": "Scanned PDFs tasveerein hain, text nahi. Do engine manuals, 1,623 pages, aur ek bhi searchable akshar nahi. Ek safety rule dhoondhne mein raat ho jati thi. PDF Q and A yahi problem khatam karta hai."},
-    {"id": 2, "kind": "shot", "img": "20_home_hidpi.png",
-     "kicker": "THE APP", "title": "One screen: upload, database, AI chain, chat",
-     "bullets": [["PDFs saved", "2 documents in this run"], ["Pages saved", "15 pages, text and OCR"], ["Search chunks", "25 chunks in the FTS5 index"], ["OCR engine", "RapidOCR, running locally"]],
-     "text": "This is PDF Q and A. Drop in any PDF, even a thousand-page scanned manual, and it reads every page, saves everything into a database, and answers your questions with the exact page number. No cloud. No subscription. It runs on your own machine.",
-     "hi": "Ye hai PDF Q and A. Koi bhi PDF daalo, chahe 1,000 page ka scanned manual ho, wo har page padhta hai, sab kuch database mein save karta hai, aur jawab deta hai exact page number ke saath. No cloud, no subscription. Tumhare apne machine pe chalta hai."},
-    {"id": 3, "kind": "shot", "img": "26_ocr_progress_full.png",
-     "kicker": "STEP 1 · UPLOAD + OCR", "title": "Scanned pages are read locally, live",
-     "bullets": [["Upload", "drag and drop, up to 20 files, 1 GB each"], ["OCR", "RapidOCR on ONNX Runtime, on this machine"], ["Live", "page number, percent, time remaining"], ["This run", "48 scanned pages, 46,212 characters read"]],
-     "text": "Uploading is drag and drop, up to twenty files at once. Scanned pages are read locally by Rapid OCR, and you watch every page land in the database live: page number, percentage, time remaining. Nothing leaves your computer.",
-     "hi": "Upload karna hai drag and drop, ek saath 20 files tak. Scanned pages Rapid OCR khud padhta hai, aur tum dekhte raho har page database mein jaata hai: page number, percent, time remaining. Kuch bhi tumhare computer se bahar nahi jaata."},
-    {"id": 4, "kind": "shot", "img": "40_answer_full.png",
-     "kicker": "STEP 2 · ASK", "title": "Every answer carries its source",
-     "bullets": [["Question", "asked in plain English"], ["Answer", "built from the top database passages"], ["Source", "file name, page number, match score"], ["Verify", "open Sources to read the exact passage"]],
-     "text": "Now ask. The answer comes back with its source: the file name, the page number, and a match score. Open the sources and you are looking at the exact passage the database found. You can verify everything yourself.",
-     "hi": "Ab poocho. Jawab aata hai apne source ke saath: file ka naam, page number, aur match score. Sources kholo aur tum dekh rahe ho wohi passage jo database ne dhoondha. Sab khud verify kar sakte ho."},
-    {"id": 5, "kind": "diagram", "diagram": "architecture",
-     "text": "Here is the pipeline. The browser talks to an Express server. A Python worker extracts text with PyMuPDF; scanned pages go through Rapid OCR. Prisma writes every page and chunk into SQLite, with an FTS5 full-text index. A question runs a BM25 search first, then builds the answer from the top passages.",
-     "hi": "Ye raha pipeline. Browser baat karta hai Express server se. Python worker text nikalta hai PyMuPDF se; scanned pages jaati hain Rapid OCR mein. Prisma har page aur chunk likhta hai SQLite mein, FTS5 full-text index ke saath. Sawaal pehle BM25 search chalata hai, phir jawab banta hai top passages se."},
-    {"id": 6, "kind": "diagram", "diagram": "aichain", "img": "23_ai_card_hidpi.png",
-     "text": "Then the AI chain. Ollama runs first, entirely on your own machine. Then GLM, NVIDIA NIM, OpenRouter, and Gemini. If one provider fails, the next one answers. And if every provider fails, you still get the database answer. The system never stops.",
-     "hi": "Phir AI chain. Ollama pehle, bilkul tumhare apne machine pe. Phir GLM, NVIDIA NIM, OpenRouter, aur Gemini. Ek provider fail hua to agla jawab deta hai. Aur sab fail ho gaye to bhi database ka jawab milta hai. System kabhi rukta nahi."},
-    {"id": 7, "kind": "diagram", "diagram": "stack",
-     "text": "Libraries and models, exactly as shipped. Node twenty and Express. Prisma seven with the libSQL driver. SQLite with an FTS5 index and BM25 ranking. PyMuPDF for text and layout. Rapid OCR on ONNX Runtime. Ollama runs Qwen two point five, seven B, locally. The cloud chain is GLM four point seven Flash, NVIDIA Nemotron three point five Lightning, OpenRouter, and Gemini Flash Lite.",
-     "hi": "Libraries aur models, bilkul jo ship hua hai. Node 20 aur Express. Prisma 7, libSQL driver ke saath. SQLite, FTS5 index aur BM25 ranking ke saath. Text aur layout ke liye PyMuPDF. Rapid OCR, ONNX Runtime pe. Ollama chalata hai Qwen 2.5 7B locally. Cloud chain: GLM 4.7 Flash, NVIDIA Nemotron 3.5 Lightning, OpenRouter, aur Gemini Flash Lite."},
-    {"id": 8, "kind": "repos",
-     "text": "And this film was built the same way. Brag supplied the storyboard, the music and the sound effects. Cinematic Skill drove the camera and the captions. Voice Studio shaped the voice and the mix. Omni Voice guided the multilingual speech design. And Playwright MCP took every real screenshot you have seen.",
-     "hi": "Aur ye film bhi aise hi bani. Brag ne di storyboard, music aur sound effects. Cinematic Skill ne chalayi camera aur captions. Voice Studio ne suara aur mix banaya. OmniVoice ne guide kiya multilingual speech design. Aur Playwright MCP ne liye saare real screenshots jo aapne dekhe."},
-    {"id": 9, "kind": "shot", "img": "42_view_data.png", "extra": "44_mobile.png",
-     "kicker": "YOUR DATA", "title": "View, export, delete — and it works on a phone",
-     "bullets": [["View", "page-by-page extracted text"], ["Export", "TXT, CSV or JSON"], ["Delete", "always asks for confirmation"], ["Mobile", "the same app at 390 pixels wide"]],
-     "text": "Your data stays yours. View any page, export to text, CSV or JSON, delete with a confirmation. The whole app works on a phone. And a complete Docker plus EC2 deployment guide ships in the repository.",
-     "hi": "Tumhara data tumhara rehta hai. Koi bhi page dekho, export karo TXT, CSV ya JSON mein, delete karo confirmation ke saath. Poora app chalta hai phone pe. Aur repository mein milti hai poori Docker plus EC2 deployment guide."},
-    {"id": 10, "kind": "outro",
-     "text": "Setup is one command. Run one command. Then drop a PDF and ask. The full guide, the Word documents and the code are in the repository. Thanks for watching.",
-     "hi": "Setup ek command hai. Run ek command hai. Phir PDF daalo aur poocho. Poori guide, Word documents aur code, sab repository mein hai. Dhanyavaad!"}
+    {
+      "id": 1,
+      "kind": "title",
+      "text": "Two instruction manuals. One thousand six hundred and twenty-three scanned pages. And not a single searchable character. Finding one safety rule could take an evening. This is the problem PDF Q and A was built to kill.",
+      "hi": "Scanned PDFs tasveerein hain, text nahi. Do engine manuals, 1,623 pages, aur ek bhi searchable akshar nahi. Ek safety rule dhoondhne mein raat ho jati thi. PDF Q and A yahi problem khatam karta hai."
+    },
+    {
+      "id": 2,
+      "kind": "shot",
+      "img": "20_home_hidpi.png",
+      "kicker": "THE APP",
+      "title": "One screen: upload, database, AI chain, chat",
+      "bullets": [
+        [
+          "PDFs saved",
+          "2 documents in this run"
+        ],
+        [
+          "Pages saved",
+          "15 pages, text and OCR"
+        ],
+        [
+          "Search chunks",
+          "25 chunks in the FTS5 index"
+        ],
+        [
+          "OCR engine",
+          "RapidOCR, running locally"
+        ]
+      ],
+      "text": "This is PDF Q and A. Drop in any PDF, even a thousand-page scanned manual, and it reads every page, saves everything into a database, and answers your questions with the exact page number. No cloud. No subscription. It runs on your own machine.",
+      "hi": "Ye hai PDF Q and A. Koi bhi PDF daalo, chahe 1,000 page ka scanned manual ho, wo har page padhta hai, sab kuch database mein save karta hai, aur jawab deta hai exact page number ke saath. No cloud, no subscription. Tumhare apne machine pe chalta hai."
+    },
+    {
+      "id": 3,
+      "kind": "shot",
+      "img": "26_ocr_progress_full.png",
+      "kicker": "STEP 1 · UPLOAD + OCR",
+      "title": "Scanned pages are read locally, live",
+      "bullets": [
+        [
+          "Upload",
+          "drag and drop, up to 20 files, 1 GB each"
+        ],
+        [
+          "OCR",
+          "RapidOCR on ONNX Runtime, on this machine"
+        ],
+        [
+          "Live",
+          "page number, percent, time remaining"
+        ],
+        [
+          "This run",
+          "48 scanned pages, 46,212 characters read"
+        ]
+      ],
+      "text": "Uploading is drag and drop, up to twenty files at once. Scanned pages are read locally by Rapid OCR, and you watch every page land in the database live: page number, percentage, time remaining. Nothing leaves your computer.",
+      "hi": "Upload karna hai drag and drop, ek saath 20 files tak. Scanned pages Rapid OCR khud padhta hai, aur tum dekhte raho har page database mein jaata hai: page number, percent, time remaining. Kuch bhi tumhare computer se bahar nahi jaata."
+    },
+    {
+      "id": 4,
+      "kind": "shot",
+      "img": "40_answer_full.png",
+      "kicker": "STEP 2 · ASK",
+      "title": "Every answer carries its source",
+      "bullets": [
+        [
+          "Question",
+          "asked in plain English"
+        ],
+        [
+          "Answer",
+          "built from the top database passages"
+        ],
+        [
+          "Source",
+          "file name, page number, match score"
+        ],
+        [
+          "Verify",
+          "open Sources to read the exact passage"
+        ]
+      ],
+      "text": "Now ask. The answer comes back with its source: the file name, the page number, and a match score. Open the sources and you are looking at the exact passage the database found. You can verify everything yourself.",
+      "hi": "Ab poocho. Jawab aata hai apne source ke saath: file ka naam, page number, aur match score. Sources kholo aur tum dekh rahe ho wohi passage jo database ne dhoondha. Sab khud verify kar sakte ho."
+    },
+    {
+      "id": 5,
+      "kind": "diagram",
+      "diagram": "architecture",
+      "text": "Here is the pipeline. The browser talks to an Express server. A Python worker extracts text with PyMuPDF; scanned pages go through Rapid OCR. Prisma writes every page and chunk into SQLite, with an FTS5 full-text index. A question runs a BM25 search first, then builds the answer from the top passages.",
+      "hi": "Ye raha pipeline. Browser baat karta hai Express server se. Python worker text nikalta hai PyMuPDF se; scanned pages jaati hain Rapid OCR mein. Prisma har page aur chunk likhta hai SQLite mein, FTS5 full-text index ke saath. Sawaal pehle BM25 search chalata hai, phir jawab banta hai top passages se."
+    },
+    {
+      "id": 6,
+      "kind": "diagram",
+      "diagram": "aichain",
+      "img": "23_ai_card_hidpi.png",
+      "text": "Then the AI chain. Ollama runs first, entirely on your own machine. Then GLM, NVIDIA NIM, OpenRouter, and Gemini. If one provider fails, the next one answers. And if every provider fails, you still get the database answer. The system never stops.",
+      "hi": "Phir AI chain. Ollama pehle, bilkul tumhare apne machine pe. Phir GLM, NVIDIA NIM, OpenRouter, aur Gemini. Ek provider fail hua to agla jawab deta hai. Aur sab fail ho gaye to bhi database ka jawab milta hai. System kabhi rukta nahi."
+    },
+    {
+      "id": 7,
+      "kind": "diagram",
+      "diagram": "stack",
+      "text": "Libraries and models, exactly as shipped. Node twenty and Express. Prisma seven with the libSQL driver. SQLite with an FTS5 index and BM25 ranking. PyMuPDF for text and layout. Rapid OCR on ONNX Runtime. Ollama runs Qwen two point five, seven B, locally. The cloud chain is GLM four point seven Flash, NVIDIA Nemotron three point five Lightning, OpenRouter, and Gemini Flash Lite.",
+      "hi": "Libraries aur models, bilkul jo ship hua hai. Node 20 aur Express. Prisma 7, libSQL driver ke saath. SQLite, FTS5 index aur BM25 ranking ke saath. Text aur layout ke liye PyMuPDF. Rapid OCR, ONNX Runtime pe. Ollama chalata hai Qwen 2.5 7B locally. Cloud chain: GLM 4.7 Flash, NVIDIA Nemotron 3.5 Lightning, OpenRouter, aur Gemini Flash Lite."
+    },
+    {
+      "id": 8,
+      "kind": "shot",
+      "img": "42_view_data.png",
+      "extra": "44_mobile.png",
+      "kicker": "YOUR DATA",
+      "title": "View, export, delete — and it works on a phone",
+      "bullets": [
+        [
+          "View",
+          "page-by-page extracted text"
+        ],
+        [
+          "Export",
+          "TXT, CSV or JSON"
+        ],
+        [
+          "Delete",
+          "always asks for confirmation"
+        ],
+        [
+          "Mobile",
+          "the same app at 390 pixels wide"
+        ]
+      ],
+      "text": "Your data stays yours. View any page, export to text, CSV or JSON, delete with a confirmation. The whole app works on a phone. And a complete Docker plus EC2 deployment guide ships in the repository.",
+      "hi": "Tumhara data tumhara rehta hai. Koi bhi page dekho, export karo TXT, CSV ya JSON mein, delete karo confirmation ke saath. Poora app chalta hai phone pe. Aur repository mein milti hai poori Docker plus EC2 deployment guide."
+    },
+    {
+      "id": 9,
+      "kind": "outro",
+      "text": "Setup is one command. Run one command. Then drop a PDF and ask. The full guide, the Word documents and the code are in the repository. Thanks for watching.",
+      "hi": "Setup ek command hai. Run ek command hai. Phir PDF daalo aur poocho. Poori guide, Word documents aur code, sab repository mein hai. Dhanyavaad!"
+    }
   ]
 }

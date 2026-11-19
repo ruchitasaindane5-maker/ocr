@@ -1,5 +1,5 @@
 Scanned PDFs are pictures, not text. PDF Q&A reads every page with OCR, stores it in SQLite through Prisma, and answers with the exact page number. 📄
 
-Prototype + technology film (3:22, English narration, real screenshots): architecture, the Ollama → GLM → NVIDIA → OpenRouter → Gemini fallback chain, every library and model, and the five open-source repositories behind the build.
+Prototype + technology film (3:00, English narration, real screenshots): architecture, the Ollama → GLM → NVIDIA → OpenRouter → Gemini fallback chain, and every library and model.
 
 Word document with the full stack: docs/Prototype_Technology_Stack.docx
