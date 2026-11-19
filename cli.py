@@ -1,10 +1,10 @@
-"""Command-line istemal (bina browser, bina AI).
+"""Command-line usage (no browser, no AI).
 
     python cli.py add "file1.pdf" ["file2.pdf"] [--ocr auto|always|never]
-    python cli.py list                 # database mein saved PDFs
-    python cli.py status               # database ki jaankari
-    python cli.py ask "UPI QR kaise banta hai?"
-    python cli.py text <doc_id>        # extracted text dekho
+    python cli.py list                 # PDFs saved in the database
+    python cli.py status               # database info
+    python cli.py ask "How is a UPI QR created?"
+    python cli.py text <doc_id>        # view extracted text
     python cli.py export <doc_id> --format txt|csv|json
     python cli.py remove <doc_id>
 """
@@ -27,7 +27,7 @@ from pdf_ocr_qa.store import Store  # noqa: E402
 def main():
     ap = argparse.ArgumentParser(description="PDF OCR + Database Q&A (No AI)")
     sub = ap.add_subparsers(dest="cmd", required=True)
-    p_add = sub.add_parser("add", help="PDF process karke database mein save karo")
+    p_add = sub.add_parser("add", help="Process PDFs and save them to the database")
     p_add.add_argument("files", nargs="+")
     p_add.add_argument("--ocr", choices=["auto", "always", "never"], default="auto")
     sub.add_parser("list")
@@ -50,16 +50,16 @@ def main():
             print(f"Processing: {path} ...")
             try:
                 if not os.path.isfile(path):
-                    print(f"  ERROR: file nahi mili: {path}")
+                    print(f"  ERROR: file not found: {path}")
                     continue
                 with open(path, "rb") as f:
                     data = f.read()
                 if data[:4] != b"%PDF":
-                    print("  ERROR: ye PDF file nahi hai")
+                    print("  ERROR: this is not a PDF file")
                     continue
                 info = store.add_document(os.path.basename(path), data,
                                           extract_pdf(path, ocr_mode=args.ocr))
-            except Exception as e:  # ek file fail ho to baaki rukni nahi chahiye
+            except Exception as e:  # one failing file must not stop the rest
                 print(f"  ERROR: {str(e)[:300]}")
                 continue
             print(f"  SAVED IN DB -> id={info['id']} pages={info['pages']} "
@@ -68,7 +68,7 @@ def main():
     elif args.cmd == "list":
         docs = store.list_docs()
         if not docs:
-            print("Database khali hai. Pehle: python cli.py add file.pdf")
+            print("Database is empty. First run: python cli.py add file.pdf")
         for d in docs:
             print(f"{d['id']}  {d['name']}  pages={d['pages']} chunks={d['chunks']} "
                   f"chars={d['chars']} added={d['created_at']}")
@@ -76,7 +76,7 @@ def main():
         print(json.dumps(store.stats(), indent=1, ensure_ascii=False))
     elif args.cmd == "ask":
         out = answer_question(store, args.question, doc_id=args.doc)
-        print("\n" + out["answer"] + "\n\n[mode: database-search, koi AI nahi]")
+        print("\n" + out["answer"] + "\n\n[mode: database-search, no AI]")
     elif args.cmd == "remove":
         print("deleted" if store.delete(args.doc_id) else "not found")
     elif args.cmd == "text":
@@ -116,7 +116,7 @@ if __name__ == "__main__":
     try:
         main()
     except KeyboardInterrupt:
-        print("\nBand kar diya.")
-    except Exception as e:  # traceback ki jagah saaf message
+        print("\nStopped.")
+    except Exception as e:  # a clean message instead of a traceback
         print(f"Error: {str(e)[:400]}")
         raise SystemExit(1)

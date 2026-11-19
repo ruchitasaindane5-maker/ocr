@@ -1,4 +1,4 @@
-// Saare database operations Prisma ORM se (Document / Page / Chunk models)
+// All database operations via Prisma ORM (Document / Page / Chunk models)
 import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
@@ -38,8 +38,8 @@ export function summaryOf(d: {
   };
 }
 
-// Ek time par ek hi ingest/delete — warna ek hi PDF do request se aaye to
-// unique constraint toot-ta tha, aur beech mein search aadha data dekhta tha.
+// One ingest/delete at a time — otherwise the same PDF arriving in two requests
+// broke the unique constraint, and searches in between saw half-written data.
 let ingestChain: Promise<unknown> = Promise.resolve();
 function withIngestLock<T>(fn: () => Promise<T>): Promise<T> {
   const run = ingestChain.then(fn, fn);
@@ -47,25 +47,42 @@ function withIngestLock<T>(fn: () => Promise<T>): Promise<T> {
   return run;
 }
 
-export function addDocument(name: string, data: Buffer, ex: Extracted) {
+/** sha256 of a file, streamed — a 1 GB PDF must not be loaded into memory. */
+function sha256File(filePath: string): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const hash = crypto.createHash("sha256");
+    fs.createReadStream(filePath)
+      .on("data", (d) => hash.update(d))
+      .on("error", reject)
+      .on("end", () => resolve(hash.digest("hex")));
+  });
+}
+
+/** Adds the PDF at filePath. The file is moved into UPLOAD_DIR (not copied). */
+export function addDocument(name: string, filePath: string, ex: Extracted) {
   return withIngestLock(async () => {
-    const sha = crypto.createHash("sha256").update(data).digest("hex");
+    const sha = await sha256File(filePath);
     const id = sha.slice(0, 12);
+    const fileSize = fs.statSync(filePath).size;
     fs.mkdirSync(UPLOAD_DIR, { recursive: true });
     const storedFile = path.join(UPLOAD_DIR, `${id}.pdf`);
-    fs.writeFileSync(storedFile, data);
+    try {
+      fs.renameSync(filePath, storedFile);
+    } catch {
+      fs.copyFileSync(filePath, storedFile); // e.g. a different drive
+    }
 
     const chunkRows = ex.pages.flatMap((p) =>
       chunkPageText(p.text).map((text) => ({
         docId: id, pageNo: p.page, method: p.method, text,
       }))
     );
-    // Document + pages + chunks ek hi transaction mein — aadha-save kabhi nahi
+    // Document + pages + chunks in one transaction — never a partial save
     await prisma.$transaction(async (tx) => {
       await tx.document.upsert({
         where: { id },
         create: {
-          id, name, sha256: sha, fileSize: data.length,
+          id, name, sha256: sha, fileSize,
           pageCount: ex.page_count, totalChars: ex.total_chars,
           ocrEngine: ex.ocr_engine, ocrPages: ex.ocr_pages,
           tablesFound: ex.tables_found,
@@ -73,7 +90,7 @@ export function addDocument(name: string, data: Buffer, ex: Extracted) {
           storedFile, createdAt: new Date().toISOString(),
         },
         update: {
-          name, fileSize: data.length, pageCount: ex.page_count,
+          name, fileSize, pageCount: ex.page_count,
           totalChars: ex.total_chars, ocrEngine: ex.ocr_engine,
           ocrPages: ex.ocr_pages, tablesFound: ex.tables_found,
           metadata: JSON.stringify(ex.metadata ?? {}),
@@ -91,7 +108,9 @@ export function addDocument(name: string, data: Buffer, ex: Extracted) {
         });
       }
       if (chunkRows.length) await tx.chunk.createMany({ data: chunkRows });
-    });
+    // Prisma's default 5 s transaction timeout is far too short for thousands
+    // of pages — it would throw away hours of OCR at the very last step.
+    }, { maxWait: 60_000, timeout: 30 * 60_000 });
     await refreshFtsForDoc(id);
     invalidateIdf();
     return getSummary(id);
@@ -152,7 +171,7 @@ export async function dbStats() {
   return { docs, pages, chunks };
 }
 
-// ---------- TF-IDF ke liye IDF map (ek baar banta hai, phir sync milta hai) ----------
+// ---------- IDF map for TF-IDF (built once, then served synchronously) ----------
 let idfCache: Map<string, number> | null = null;
 let idfBuilding: Promise<Map<string, number>> | null = null;
 export function invalidateIdf() { idfCache = null; idfBuilding = null; }
@@ -180,7 +199,7 @@ export function idfOf(idf: Map<string, number>, term: string): number {
   return idf.get(term) ?? 1.0;
 }
 
-/** @deprecated ensureIdf()/idfOf() use karo — ye har token par await karta tha */
+/** @deprecated use ensureIdf()/idfOf() — this awaited on every token */
 export async function termIdf(term: string): Promise<number> {
   return idfOf(await ensureIdf(), term);
 }

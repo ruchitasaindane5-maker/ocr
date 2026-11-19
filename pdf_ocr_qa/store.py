@@ -1,18 +1,18 @@
-"""SQLite database storage + search (koi AI nahi).
+"""SQLite database storage + search (no AI).
 
-Sab data `data/pdf_qa.db` (SQLite) mein save hota hai:
-  documents  - PDF ki jaankari (name, hash, pages, kab add hui)
-  pages      - har page ka extracted text (method: text / ocr)
-  chunks     - search ke liye kate hue hisse
-  chunks_fts - SQLite FTS5 full-text index (BM25 ranking) - ye database
-               ki apni classic search hai, koi AI/LLM/embedding nahi.
+All data is saved in `data/pdf_qa.db` (SQLite):
+  documents  - PDF info (name, hash, pages, when it was added)
+  pages      - extracted text of every page (method: text / ocr)
+  chunks     - pieces cut for search
+  chunks_fts - SQLite FTS5 full-text index (BM25 ranking) - the database's
+               own classic search, no AI/LLM/embeddings.
 
-Search do tarike se hoti hai:
-  1. FTS5 BM25 (primary, database ke andar, bahut tez)
-  2. TF-IDF fallback (agar FTS se kam result mile, jaise aadha shabd)
+Search works in two ways:
+  1. FTS5 BM25 (primary, inside the database, very fast)
+  2. TF-IDF fallback (when FTS returns too few results, e.g. partial words)
 
-Purani `store.json` ho to pehli baar chalane par uska data khud
-database mein migrate ho jata hai.
+If an old `store.json` exists, its data is migrated into the database
+automatically on first run.
 """
 from __future__ import annotations
 
@@ -32,6 +32,7 @@ DB_FILE = os.environ.get("PDF_QA_DB", os.path.join(DATA_DIR, "pdf_qa.db"))
 OLD_JSON = os.path.join(DATA_DIR, "store.json")
 UPLOAD_DIR = os.path.join(DATA_DIR, "uploads")
 
+# Hindi/Hinglish stopwords are intentional so Hinglish questions still match.
 STOPWORDS = set(
     """the a an is are was were what how why when where who which in on of to for
     and or ke ka ki hai hain kya kaise karna kare mujhe batao bataiye me mein ye
@@ -127,7 +128,7 @@ class Store:
 
     # ---------- internal ----------
     def _migrate_old_json(self):
-        """Purani store.json (v1) ka data database mein le aao, ek hi baar."""
+        """Move data from the old store.json (v1) into the database, once."""
         if self.stats()["docs"] or not os.path.exists(OLD_JSON):
             return
         try:
@@ -247,7 +248,7 @@ class Store:
                 "pages": one("SELECT COUNT(*) FROM pages"),
                 "chunks": one("SELECT COUNT(*) FROM chunks")}
 
-    # ---------- search (bina AI) ----------
+    # ---------- search (no AI) ----------
     def term_idf(self, term: str) -> float:
         if self._idf_cache is None:
             df: Counter = Counter()
@@ -264,7 +265,7 @@ class Store:
         if not terms:
             return []
         hits = self._fts_search(terms, doc_id, top_k)
-        if len(hits) < top_k:  # FTS se kam mila to TF-IDF se bhar do
+        if len(hits) < top_k:  # top up with TF-IDF when FTS found too few
             seen = {(h["doc_id"], h["page"], h["text"][:60]) for h in hits}
             for h in self._tfidf_search(terms, doc_id, top_k):
                 if (h["doc_id"], h["page"], h["text"][:60]) not in seen:

@@ -1,8 +1,8 @@
-"""PDF extraction worker (Python) — Node server isse bulata hai.
+"""PDF extraction worker (Python) — called by the Node server.
 
-Prisma/Node sirf database aur API sambhalta hai; PDF padhna aur OCR
-PyMuPDF/Python ka kaam hai. Ye script ek PDF ko process karke result
-JSON file mein likh deti hai:
+Prisma/Node handles only the database and API; reading PDFs and OCR is
+PyMuPDF/Python's job. This script processes one PDF and writes the result
+to a JSON file:
 
     python worker.py <pdf_path> <auto|always|never> <output.json>
 """
@@ -22,7 +22,12 @@ def main() -> int:
         print("usage: worker.py <pdf> <ocr_mode> <out.json>", file=sys.stderr)
         return 2
     pdf_path, ocr_mode, out_path = sys.argv[1], sys.argv[2], sys.argv[3]
-    result = extract_pdf(pdf_path, ocr_mode=ocr_mode)
+    # One "PROGRESS done total" line per page — the Node server reads these
+    # to show progress and to tell a slow-but-working PDF from a stuck one.
+    def progress(done: int, total: int) -> None:
+        print(f"PROGRESS {done} {total}", flush=True)
+
+    result = extract_pdf(pdf_path, ocr_mode=ocr_mode, progress=progress)
     with open(out_path, "w", encoding="utf-8") as f:
         json.dump(result, f, ensure_ascii=False)
     print(f"pages={result['page_count']} chars={result['total_chars']} "

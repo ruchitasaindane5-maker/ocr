@@ -1,9 +1,9 @@
 // ============================================================
 //  PDF OCR Q&A — Prisma ORM Schema (SQLite)
-//  Models: Document -> Page, Chunk (search ke hisse)
-//  chunks_fts (FTS5 virtual table) Prisma model nahi hai — wo
-//  server boot par raw SQL se banti hai. Tables `npx prisma db push`
-//  se bhi banti hain aur server khud bhi ready kar deta hai
+//  Models: Document -> Page, Chunk (search pieces)
+//  chunks_fts (FTS5 virtual table) is not a Prisma model — it is
+//  created with raw SQL on server boot. Tables can also be created with
+//  `npx prisma db push`, and the server prepares them itself too
 //  (server/prisma.ts -> ensureSchema).
 // ============================================================
 
@@ -16,9 +16,9 @@ datasource db {
   provider = "sqlite"
 }
 
-/// Ek upload ki gayi PDF
+/// An uploaded PDF
 model Document {
-  id          String  @id // sha256 ka pehla 12 char
+  id          String  @id // first 12 chars of sha256
   name        String
   sha256      String  @unique
   fileSize    Int     @default(0) @map("file_size")
@@ -37,7 +37,7 @@ model Document {
   @@map("documents")
 }
 
-/// Ek page ka extracted text (method: text | ocr:<engine> | text+ocr:<engine>)
+/// Extracted text of one page (method: text | ocr:<engine> | text+ocr:<engine>)
 model Page {
   id        Int      @id @default(autoincrement())
   docId     String   @map("doc_id")
@@ -53,7 +53,7 @@ model Page {
   @@map("pages")
 }
 
-/// Search ke liye kata hua text ka hissa (isi par FTS5/BM25 + TF-IDF chalta hai)
+/// A piece of text cut for search (FTS5/BM25 + TF-IDF run on this)
 model Chunk {
   id     Int    @id @default(autoincrement())
   docId  String @map("doc_id")

@@ -1,10 +1,10 @@
 # 📄 PDF OCR + Prisma Database Q&A + AI Fallback Chain
 
-**Jo bhi PDF daalo, uska data proper nikal kar Prisma ORM se SQLite
-database mein save hota hai. Sawaal ka jawab pehle AI fallback chain
-(Ollama local → GLM → NVIDIA → Gemini) se aata hai; koi AI na chale
-to database search ka jawab mil hi jata hai — app kabhi rukti nahi.
-Bina kisi key ke bhi poora system chalta hai.**
+**Drop in any PDF and its data is properly extracted and saved to a SQLite
+database via Prisma ORM. Questions are answered first by the AI fallback
+chain (Ollama local → GLM → NVIDIA → OpenRouter → Gemini); if no AI works,
+you still get the database-search answer — the app never stops.
+The whole system works even without any key.**
 
 ```
 Browser ─► Node/Express server ─► Python worker (PDF + OCR: PyMuPDF)
@@ -17,243 +17,248 @@ Browser ─► Node/Express server ─► Python worker (PDF + OCR: PyMuPDF)
           SQLite database — data/pdf_qa.db
           (+ FTS5 full-text index, BM25 search)
                     ▼
-     Sawaal ─► search (pages) ─► AI chain: Ollama → GLM → NVIDIA → Gemini
-                    │                    │ sab fail
+  Question ─► search (pages) ─► AI chain: Ollama → GLM → NVIDIA → OpenRouter → Gemini
+                    │                    │ all fail
                     └────────────────────▼
-                  database-search jawab + (file, page) source
+                  database-search answer + (file, page) source
 ```
 
 ---
 
-## ▶️ Chalane ka tareeka (step-by-step)
+## ▶️ How to run (step by step)
 
-**Hinglish videos:** [Setup, code-flow deep dive aur AWS deploy](brag-output/video-guide.md) — MP4 downloads, chapter timestamps aur copy-paste commands.
+> **Quick Windows guide:** [HOW_TO_RUN.md](HOW_TO_RUN.md) — setup, keys, Ollama, large PDFs and troubleshooting on one page.
 
-### Pehle ye dono install hone chahiye
+**Video guides (Hinglish audio):** [Setup, code-flow deep dive and AWS deploy](brag-output/video-guide.md) — MP4 downloads, chapter timestamps and copy-paste commands.
+
+### These two must be installed first
 - **Node.js 20.19+** — https://nodejs.org
-- **Python 3.10+** — https://python.org (Windows par install ke time
-  *"Add Python to PATH"* tick karna)
+- **Python 3.10+** — https://python.org (on Windows, tick
+  *"Add Python to PATH"* during install)
 
-### Step 1 — Project folder mein aao
+### Step 1 — Go to the project folder
 ```bash
 cd ocr_pdf
 ```
 
-### Sabse aasan tareeka — ek-command setup (recommended)
+### Easiest way — one-command setup (recommended)
 
 ```bash
-bash setup.sh        # Linux/Mac   (Windows par: setup.bat)
+bash setup.sh        # Linux/Mac   (on Windows: setup.bat)
 npm start
 ```
 
-`setup.sh` khud `.venv` banata hai, saari Python/Node libraries sahi
-order mein install karta hai (OpenCV headless wala libGL-jhanjhat
-bhi khud sambhalta hai), Prisma Client generate karta hai aur
-database tables ready karke deta hai. Phir browser mein
-**http://localhost:8000** kholo.
+`setup.sh` creates `.venv` itself, installs all Python/Node libraries in
+the right order (it also handles the headless-OpenCV libGL hassle),
+generates the Prisma Client and prepares the database tables. Then open
+**http://localhost:8000** in the browser.
 
-### Haath se karna ho to
+### Doing it by hand
 
-### Step 2 — Python (PDF/OCR) ki libraries
+### Step 2 — Python (PDF/OCR) libraries
 ```bash
 python3 -m venv .venv
 .venv/bin/pip install -r requirements.txt
-# rapidocr apne saath GUI-wala opencv-python laata hai jo kuch systems
-# par libGL error deta hai — isiliye aakhir mein ye do command zaroor:
+# rapidocr brings the GUI opencv-python, which gives a libGL error on
+# some systems — so always run these two commands at the end:
 .venv/bin/pip uninstall -y opencv-python
 .venv/bin/pip install --force-reinstall opencv-python-headless
 ```
-Windows par `.venv/bin/pip` ki jagah `.venv\Scripts\pip` use karo.
+On Windows use `.venv\Scripts\pip` instead of `.venv/bin/pip`.
 
 ### Step 3 — Node + Prisma install
 ```bash
 npm install
 ```
-Ye `@prisma/client`, `prisma`, `express` sab install karega aur
-Prisma Client generate karega.
+This installs `@prisma/client`, `prisma`, `express` etc. and generates
+the Prisma Client.
 
 ### Step 4 — Database (optional)
 ```bash
 npm run db:setup
 ```
-Isse `data/pdf_qa.db` ban jayega aur models ke tables
-(`documents`, `pages`, `chunks` + FTS5 index) ready ho jayenge.
-*(Ye step bhool bhi jao to koi baat nahi — server khud pehle boot par
-tables bana deta hai. Standard Prisma wala tareeka: `npx prisma db push`.)*
+This creates `data/pdf_qa.db` and prepares the model tables
+(`documents`, `pages`, `chunks` + FTS5 index).
+*(It's fine if you forget this step — the server creates the tables
+itself on first boot. The standard Prisma way: `npx prisma db push`.)*
 
-Database dekhna ho to Prisma Studio:
+To browse the database, use Prisma Studio:
 ```bash
 npm run db:studio
 ```
 
-### Step 5 (A) — Ollama local lagao (sabse best — sirf tumhare PC ke liye)
+### Step 5 (A) — Set up local Ollama (best option — just for your PC)
 
-Tumhara laptop: **16 GB RAM + 6 GB graphics card** — iske liye
-perfect model hai **`qwen2.5:7b`** (~4.7 GB download):
+Your laptop: **16 GB RAM + 6 GB graphics card** — the perfect model for
+it is **`qwen2.5:7b`** (~4.7 GB download):
 
-1. https://ollama.com se Ollama install karo (Windows app tray mein chalti rehti hai)
-2. Terminal mein model download karo:
+1. Install Ollama from https://ollama.com (the Windows app keeps running in the tray)
+2. Download the model in a terminal:
    ```bash
    ollama pull qwen2.5:7b
    ```
-3. Bas — server start karne par Ollama **apne aap chain mein pehle
-   number par** use hoga. Koi key nahi, koi internet nahi, koi paisa nahi.
+3. That's it — when the server starts, Ollama is **automatically first in
+   the chain**. No key, no internet, no cost.
 
-Kyun yahi model tumhare (16 GB RAM) laptop ke liye best hai:
-- Model ~4.7 GB ka hai — bada hissa 6 GB VRAM (graphics card) mein
-  rahega, isliye 16 GB RAM par bhi aaram se chalega aur jawab fast
-  aayega (lagbhag 4–10 sec)
-- Hindi/Hinglish Qwen par sabse achhi hai (tumhari PDFs mixed hain)
-- Code mein context `num_ctx 8192` set hai, taaki lambe PDF passages
-  naa katein
-- ⚠️ `qwen2.5:14b` 16 GB RAM par mat lagana — 9 GB ka model RAM
-  bhar dega, laptop slow/hang ho sakta hai. 7B hi sahi rahega.
-- Agar phir bhi slow lage (jaise saath mein Chrome ke bahut tabs
-  khule hon), to `.env` mein `OLLAMA_MODEL=qwen2.5:3b` kar do —
-  halka model hai, jawab thode simple lekin tez aayenge. Model
-  chalate waqt bhaari apps band rakhna to speed best rahegi.
+Why this model is best for your (16 GB RAM) laptop:
+- The model is ~4.7 GB — most of it stays in 6 GB VRAM (graphics card),
+  so it runs comfortably on 16 GB RAM and answers come fast
+  (about 4–10 sec)
+- Qwen handles Hindi/Hinglish best (your PDFs are mixed)
+- The code sets context `num_ctx 8192`, so long PDF passages are not
+  truncated
+- ⚠️ Don't use `qwen2.5:14b` on 16 GB RAM — the 9 GB model fills the RAM
+  and the laptop may slow down/hang. Stick with 7B.
+- If it still feels slow (e.g. with many Chrome tabs open), set
+  `OLLAMA_MODEL=qwen2.5:3b` in `.env` — a lighter model with simpler but
+  faster answers. Keep heavy apps closed while the model runs for the
+  best speed.
 
-### Step 5 (B) — Free AI keys lagao (optional, backup ke liye)
-`.env.example` ko `.env` naam se copy karo aur teeno keys bharo
-(teeno lagane ki salah hai — fallback chain tabhi kaam karegi):
+### Step 5 (B) — Add free AI keys (optional, as backup)
+Copy `.env.example` to `.env` and fill in the keys
+(adding all of them is recommended — the fallback chain only works then):
 
-| API | Free key kahan se milegi | .env mein |
+| API | Where to get a free key | In .env |
 |---|---|---|
 | **GLM (z.ai)** | https://z.ai/manage-apikey/apikey-list — free model `glm-4.7-flash` | `GLM_API_KEY=` |
 | **NVIDIA NIM** | https://build.nvidia.com → *Get API Key* (`nvapi-...`) | `NVIDIA_API_KEY=` |
+| **OpenRouter** | https://openrouter.ai/keys — free `:free` models (`sk-or-...`) | `OPENROUTER_API_KEY=` |
 | **Google Gemini** | https://aistudio.google.com/apikey | `GEMINI_API_KEY=` |
 
-Keys bhar kar server start karne par website ke left panel mein
-teeno ka status ✅ dikhega, aur **"🔑 API Keys Test Karo"** button se
-har key ko live test bhi kar sakte ho.
+After adding keys and starting the server, the website's left panel
+shows ✅ for each one, and the **"🔑 Test All AI"** button tests every
+key live.
 
-**Fallback aise kaam karta hai:** sawaal par pehle PDF se relevant
-pages nikalte hain, phir **Ollama (local) → GLM → NVIDIA → Gemini**
-order mein AI ko bhejte hain. Ollama band ho to wo chup-chaap skip
-ho jata hai aur cloud wali chain chalti hai. Koi API fail hui (galat key, rate-limit 429, timeout,
-server down) to agli apne aap try hoti hai — jawab ke neeche dikhega
-bhi ki *"Pehele fail hui: GLM — isliye agli API use hui"*. Teeno fail
-ho jayein to purana database-search jawab mil jata hai.
-Order badalna ho to `.env` mein `AI_PROVIDER_ORDER=gemini,glm,nvidia`
-jaisa set karo; AI pura band karna ho to `AI_MODE=off`.
+**How the fallback works:** for a question, the relevant PDF pages are
+found first, then sent to the AI in the order **Ollama (local) → GLM →
+NVIDIA → OpenRouter → Gemini**. If Ollama is down it is silently skipped
+and the cloud chain runs. If an API fails (wrong key, rate-limit 429,
+timeout, server down) the next one is tried automatically — the answer
+footer even shows *"failed first: GLM"* so you know the next API was used.
+If all of them fail, you get the database-search answer.
+To change the order, set something like `AI_PROVIDER_ORDER=gemini,glm,nvidia`
+in `.env`; to turn AI off completely, `AI_MODE=off`.
 
-### Step 6 — Server chalao
+### Step 6 — Run the server
 ```bash
 npm start
 ```
-Browser mein kholo: **http://localhost:8000**
+Open in the browser: **http://localhost:8000**
 
-Phir: **① PDF upload karo → ② "Database mein save ho gaya" dikhega →
-③ sawaal puchho.** Server band karna ho to `Ctrl+C`. Dobara `npm start`
-karne par purana data database se apne aap aa jayega — dobara upload
-nahi karna padega.
+Then: **① upload a PDF → ② "Saved to database" appears →
+③ ask a question.** Stop the server with `Ctrl+C`. When you run
+`npm start` again, the old data loads from the database automatically —
+no need to upload again.
 
-> **Windows note:** agar upload par "Python worker start nahi hua"
-> error aaye, to `.env.example` ko `.env` naam se copy karke usmein
-> `PYTHON_BIN=python` set karo (Linux/Mac par `python3`).
+> **Windows note:** if upload shows a "Python worker failed to start"
+> error, copy `.env.example` to `.env` and set `PYTHON_BIN=python` in it
+> (`python3` on Linux/Mac).
 
-### Purana Python-only tareeka (optional)
-`app.py` (FastAPI) aur `cli.py` abhi bhi repo mein hain aur wahi
-database file use karte hain, lekin **main server ab Node + Prisma hai**.
+### Old Python-only way (optional)
+`app.py` (FastAPI) and `cli.py` are still in the repo and use the same
+database file, but **the main server is now Node + Prisma**.
 
-### ☁️ AWS par deploy karna hai?
-Poori step-by-step guide dekho: **[AWS_DEPLOY.md](AWS_DEPLOY.md)**
-(Docker image ready hai — `Dockerfile` + `docker-compose.yml` +
-`/api/health` health check. EC2 par `docker compose up -d --build`
-se poora product chal jayega; wahan Ollama skip hokar cloud AI
-chain chalti hai.)
+### ☁️ Deploying to AWS?
+See the full step-by-step guide: **[AWS_DEPLOY.md](AWS_DEPLOY.md)**
+(The Docker image is ready — `Dockerfile` + `docker-compose.yml` +
+`/api/health` health check. On EC2, `docker compose up -d --build`
+runs the whole product; there Ollama is skipped and the cloud AI chain
+runs.)
 
 ---
 
 ## 🗄️ Prisma Models (prisma/schema.prisma)
 
-| Model | Kya save hota hai |
+| Model | What is saved |
 |---|---|
-| `Document` | PDF ka naam, sha256, size, total pages/chars, OCR stats, kab add hui |
-| `Page` | Har page ka extracted text + method (`text` / `ocr:...`) |
-| `Chunk` | Search ke liye ~900 char ke hisse, page number ke saath |
-| `chunks_fts` | FTS5 virtual table (Prisma model nahi ho sakti — raw SQL se banti hai, search BM25 ranking se hoti hai) |
+| `Document` | PDF name, sha256, size, total pages/chars, OCR stats, when it was added |
+| `Page` | Each page's extracted text + method (`text` / `ocr:...`) |
+| `Chunk` | ~900 char pieces for search, with the page number |
+| `chunks_fts` | FTS5 virtual table (can't be a Prisma model — created with raw SQL, search uses BM25 ranking) |
 
-Saare database operations Prisma Client se hote hain
+All database operations go through Prisma Client
 (`server/store.ts`, `server/prisma.ts`) — `document.upsert`,
-`page.createMany`, `chunk.findMany` vagera. Database file:
-**`data/pdf_qa.db`**. Ek hi PDF dobara daalo to duplicate nahi
-banta — wahi `Document` update ho jata hai.
+`page.createMany`, `chunk.findMany` etc. Database file:
+**`data/pdf_qa.db`**. Uploading the same PDF again does not create a
+duplicate — the same `Document` is updated.
 
-## ❓ "Konsi bhi PDF par work karega na?"
+## ❓ "Will it work with any PDF?"
 
-Haan — jo PDF file khulti hai, uska text nikalne ki har koshish hoti
-hai. Ye sab test karke verified hai:
+Yes — every effort is made to extract text from any PDF that opens.
+All of this has been tested and verified:
 
-| PDF ki halat | Result |
+| PDF condition | Result |
 |---|---|
-| Normal digital PDF (Word/Chrome se bani) | ✅ Text layer, reading-order ke saath |
-| Multi-column PDF | ✅ Pehle poora left column, phir right column |
-| Table wali PDF | ✅ `Product \| 55000 \| 12` format mein — rate/dhoondhna aasaan |
-| Scanned PDF (sirf photo, 0 text) | ✅ OCR se text nikla (test: 1,328 chars) aur DB mein save |
-| Screenshot/Canva wali PDF (aapki dono guides) | ✅ Text + OCR merge, duplicate saaf karke |
-| Kharab/garbled text layer | ✅ Quality fail hone par OCR wala text |
-| Form wali PDF | ✅ Form values bhi text mein |
-| Har page par same header/footer | ✅ Apne aap hat jata hai (search saaf rehta hai) |
+| Normal digital PDF (made from Word/Chrome) | ✅ Text layer, in reading order |
+| Multi-column PDF | ✅ The whole left column first, then the right column |
+| PDF with tables | ✅ In `Product \| 55000 \| 12` format — easy to find rates |
+| Scanned PDF (image only, 0 text) | ✅ Text extracted via OCR (test: 1,328 chars) and saved to DB |
+| Screenshot/Canva PDF (both of your guides) | ✅ Text + OCR merged, duplicates removed |
+| Broken/garbled text layer | ✅ OCR text used when quality check fails |
+| PDF with forms | ✅ Form values included in the text |
+| Same header/footer on every page | ✅ Removed automatically (keeps search clean) |
 
-**Sach wali limitations (chhupana galat hoga):**
-- 🔒 Password-protected PDF pehle unlock karni padegi (saaf error aata hai).
-- ✍️ Handwriting OCR se theek nahi padhegi — printed text best hai.
-- 🇮🇳 Hindi printed text ke liye Tesseract (hin) best hai
-  (neeche dekho); default RapidOCR English mein strong hai.
-- Agar koi AI key na lagi ho (ya teeno fail ho jayein) to jawab
-  *"likha hua"* nahi hota — PDF ke relevant hisse page number ke
-  saath milte hain. Sawaal mein PDF ke exact shabd rakho:
-  `"UPI QR kaise banta hai?"`, `"Laptop price stock"`. AI keys
-  lagte hi wahi hisse AI saaf bhasha mein jawab bana deta hai.
+**Honest limitations (hiding them would be wrong):**
+- 🔒 Password-protected PDFs must be unlocked first (a clear error is shown).
+- ✍️ OCR won't read handwriting well — printed text works best.
+- 🇮🇳 Tesseract (hin) is best for printed Hindi text
+  (see below); the default RapidOCR is strong in English.
+- If no AI key is set (or all of them fail), the answer is not
+  *"written"* — you get the relevant PDF passages with page numbers.
+  Use the PDF's exact words in your question:
+  `"How is a UPI QR created?"`, `"Laptop price stock"`. As soon as AI keys
+  are added, the AI turns those same passages into a clean answer.
 
 ## 🔍 OCR engine
 
-Priority: **Tesseract → EasyOCR → RapidOCR** (jo pehle mil jaye).
-Hindi ke liye: Ubuntu `sudo apt install tesseract-ocr tesseract-ocr-hin`
-· Windows par UB-Mannheim Tesseract installer mein *Hindi (hin)* tick
-karo, phir `pip install pytesseract Pillow`. Default RapidOCR sirf
-`pip install` se chal jata hai.
+Priority: **Tesseract → EasyOCR → RapidOCR** (whichever is found first).
+For Hindi: Ubuntu `sudo apt install tesseract-ocr tesseract-ocr-hin`
+· on Windows tick *Hindi (hin)* in the UB-Mannheim Tesseract installer,
+then `pip install pytesseract Pillow`. The default RapidOCR works with
+just `pip install`.
 
 ## 📁 Files
 
-| File | Kaam |
+| File | Purpose |
 |---|---|
-| `setup.sh` · `setup.bat` | Ek-command setup (venv, libraries, Prisma, DB) |
+| `setup.sh` · `setup.bat` | One-command setup (venv, libraries, Prisma, DB) |
 | `prisma/schema.prisma` | Prisma models (Document/Page/Chunk) |
 | `prisma.config.ts` | Prisma + SQLite path config |
-| `server/index.ts` | Express API + web UI serve |
-| `server/store.ts` | Prisma ORM se saare DB operations |
-| `server/search.ts` · `server/answer.ts` | FTS5/BM25 + TF-IDF search, jawab |
-| `server/ai.ts` | AI fallback chain (Ollama → GLM → NVIDIA → Gemini) |
-| `server/worker.ts` | Python extraction worker ko bulana (timeout ke saath) |
-| `worker.py` + `pdf_ocr_qa/` | PDF padhna + OCR (Python/PyMuPDF) |
+| `server/index.ts` | Express API + serves the web UI |
+| `server/store.ts` | All DB operations via Prisma ORM |
+| `server/search.ts` · `server/answer.ts` | FTS5/BM25 + TF-IDF search, answers |
+| `server/ai.ts` | AI fallback chain (Ollama → GLM → NVIDIA → OpenRouter → Gemini) |
+| `server/worker.ts` | Calls the Python extraction worker (with a timeout) |
+| `worker.py` + `pdf_ocr_qa/` | PDF reading + OCR (Python/PyMuPDF) |
 | `static/index.html` | Browser UI (upload, DB panel, AI panel, chat, export) |
-| `scripts/init-db.mjs` | `prisma db push` ke bina tables banane ka pakka tareeka |
-| `data/pdf_qa.db` | Tumhara database (auto-banta hai, git mein nahi jata) |
+| `scripts/init-db.mjs` | Reliable way to create tables without `prisma db push` |
+| `data/pdf_qa.db` | Your database (created automatically, not committed to git) |
 
-Har PDF card par **⬇ TXT / CSV / JSON export** hai — data proper
-aaya ya nahi, khud check kar sakte ho.
+Every PDF card has **⬇ TXT / CSV / JSON export** — so you can check for
+yourself whether the data came out properly.
 
-## 🔧 Full audit mein kya-kya theek hua (Nov 2026)
+## 🔧 What was fixed in the full audit (Nov 2026)
 
-- **Fresh DB par server crash hota tha** — tables hi nahi banti thi.
-  Ab server boot par khud schema ready kar deta hai.
-- **OCR chup-chaap fail ho jata tha** (GUI `opencv-python` ka libGL
-  error) — ab setup script headless ko sahi order mein lagata hai,
-  aur engine na mile to upload par saaf chetaavni dikhti hai.
-- **UI mein filename se script chal sakta tha (XSS)** — ab naam
-  hamesha text ki tarah lagta hai; server par bhi naam saaf hota hai.
-- Koi bhi API error ab **poora server crash nahi** karta (saaf JSON
-  error milta hai); upload/download par path-traversal aur header
-  todne wale naam band; badi file (100 MB) aur bada sawaal (2000
-  akshar) par limit.
-- Ek hi PDF do baar/ek saath upload par unique-constraint crash
-  band — sab kuch ek transaction mein save hota hai.
-- Python worker par **15 minute timeout** — badi PDF par system
-  hamesha ke liye nahi atkta; bachi hui temp files apne aap saaf.
-- Jawab mein **milte-julte hisse dobara nahi** aate; bade database
-  par jawab ab tez (IDF ek hi baar banta hai).
-- UI naya: toast notifications, upload progress + timer, typing
-  indicator, example-sawaal chips, jawab copy button, mobile par
-  chat pehle, server down ho to banner, delete se pehle confirm.
+- **The server crashed on a fresh DB** — the tables were never created.
+  Now the server prepares the schema itself on boot.
+- **OCR failed silently** (libGL error from the GUI `opencv-python`) —
+  the setup script now installs the headless build in the right order,
+  and if no engine is found a clear warning is shown on upload.
+- **A filename could run a script in the UI (XSS)** — names are now
+  always set as text; the server sanitises names too.
+- An API error no longer **crashes the whole server** (you get clean JSON
+  errors); path traversal and header-breaking names on upload/download
+  are blocked; limits on large files (1 GB, configurable) and long questions (2000
+  characters).
+- No more unique-constraint crash when the same PDF is uploaded twice /
+  concurrently — everything is saved in one transaction.
+- **Stall timeout** on the Python worker — it is stopped only if no page
+  finishes for 10 minutes, so 1000+ page scanned PDFs can run for hours
+  while a stuck OCR still can't hang the system; the UI shows live page
+  progress with time left; leftover temp files are cleaned up automatically.
+  Uploads up to 1 GB per file (`MAX_UPLOAD_MB`).
+- Answers no longer repeat **near-duplicate passages**; answers are faster
+  on large databases (IDF is built only once).
+- New UI: toast notifications, upload progress + timer, typing
+  indicator, example-question chips, answer copy button, chat first on
+  mobile, banner when the server is down, confirmation before delete.

@@ -1,6 +1,6 @@
-// Sawaal -> database search -> jawab.
-// Keys lagi hon to AI fallback chain (GLM -> NVIDIA -> Gemini) jawab
-// likhti hai; warna/teeno fail hon to database-search wala jawab.
+// Question -> database search -> answer.
+// If AI is available, the fallback chain (Ollama -> GLM -> NVIDIA -> OpenRouter -> Gemini)
+// writes the answer; otherwise (or if all fail) the database-search answer is used.
 import { STOPWORDS, tokenize } from "./chunk.js";
 import { search, type Hit } from "./search.js";
 import { ensureIdf, idfOf, listDocs } from "./store.js";
@@ -26,8 +26,8 @@ async function extractiveAnswer(question: string, hits: Hit[]): Promise<string> 
     }
   }
   candidates.sort((a, b) => b.score - a.score);
-  // Milte-julte hisse dobara mat dikhao: shabd-overlap se pehchano
-  // (shuru ke aksharon se compare karne par table wale hisse fisal jate the)
+  // Don't show near-duplicate passages: detect them by word overlap
+  // (comparing leading characters let table passages slip through)
   const tokensOf = (s: string) => new Set(tokenize(s));
   const picked: { window: string; h: Hit; tokens: Set<string> }[] = [];
   for (const c of candidates) {
@@ -43,7 +43,7 @@ async function extractiveAnswer(question: string, hits: Hit[]): Promise<string> 
   }
   const final = picked.length ? picked : [{ window: hits[0].text.slice(0, 500), h: hits[0] }];
   return [
-    "Database mein mile sabse relevant hisso ke hisaab se:\n",
+    "Based on the most relevant passages found in the database:\n",
     ...final.map((p) => `• ${p.window}  — (${p.h.doc_name}, page ${p.h.page})`),
   ].join("\n");
 }
@@ -53,12 +53,12 @@ export async function answerQuestion(
 ) {
   const hits = await search(question, docId, topK);
   if (!hits.length) {
-    const docs = (await listDocs()).map((d) => d.name).join(", ") || "koi PDF nahi";
+    const docs = (await listDocs()).map((d) => d.name).join(", ") || "no PDFs";
     return {
       answer:
-        `Is sawaal ke shabd kisi PDF mein nahi mile.\n` +
-        `Database mein abhi ye PDFs hain: ${docs}\n` +
-        `Tip: PDF mein use hue exact shabd try karo (jaise heading ya step ka naam).`,
+        `The words in this question were not found in any PDF.\n` +
+        `PDFs currently in the database: ${docs}\n` +
+        `Tip: try the exact words used in the PDF (such as a heading or step name).`,
       sources: [], mode: "database-search",
     };
   }
@@ -73,7 +73,7 @@ export async function answerQuestion(
       method: h.method, passage: h.text.slice(0, 600),
     });
   }
-  // Pehle AI fallback chain (Ollama -> GLM -> NVIDIA -> Gemini), fail ho to DB jawab
+  // AI fallback chain first (Ollama -> GLM -> NVIDIA -> OpenRouter -> Gemini); DB answer if it fails
   const ai = await generateAiAnswer(question, hits);
   if (ai.text) {
     return {

@@ -1,6 +1,6 @@
-// Database search bina AI ke:
-//  1) SQLite FTS5 + BM25 (raw SQL — FTS virtual table Prisma model nahi hoti)
-//  2) TF-IDF fallback (Prisma ORM se chunks padh kar) jab FTS se kam mile
+// Database search without AI:
+//  1) SQLite FTS5 + BM25 (raw SQL — an FTS virtual table can't be a Prisma model)
+//  2) TF-IDF fallback (reads chunks via Prisma ORM) when FTS returns too few
 import { prisma } from "./prisma.js";
 import { STOPWORDS, tokenize } from "./chunk.js";
 import { ensureIdf, idfOf } from "./store.js";
@@ -59,7 +59,7 @@ async function tfidfSearch(
     where: docId ? { docId } : {},
     include: { document: { select: { name: true } } },
   });
-  const idf = await ensureIdf(); // ek baar — pehle har token par await hota tha
+  const idf = await ensureIdf(); // once — previously awaited on every token
   const qCounts = new Map<string, number>();
   for (const t of terms) qCounts.set(t, (qCounts.get(t) ?? 0) + 1);
   const qVec = new Map<string, number>();

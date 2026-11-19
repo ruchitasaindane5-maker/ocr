@@ -1,7 +1,7 @@
-# PDF Q&A — ek command mein poora product (AWS EC2 par yahi chalega)
+# PDF Q&A — the whole product in one command (this is what runs on AWS EC2)
 #   docker compose up -d --build     -> http://localhost:8000
-#   docker compose logs -f           -> logs dekho
-#   docker compose down              -> band karo (data ./data mein safe rahega)
+#   docker compose logs -f           -> view logs
+#   docker compose down              -> stop (data stays safe in ./data)
 services:
   app:
     build: .
@@ -10,7 +10,7 @@ services:
       - "8000:8000"
     env_file:
       - path: .env
-        required: false   # .env na ho to bhi chalega (database-search mode)
+        required: false   # works without .env too (database-search mode)
     volumes:
-      - ./data:/app/data  # SQLite database + uploaded PDFs yahin rahte hain
+      - ./data:/app/data  # SQLite database + uploaded PDFs live here
     restart: unless-stopped

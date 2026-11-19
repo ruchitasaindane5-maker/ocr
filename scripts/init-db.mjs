@@ -1,9 +1,9 @@
-// Database tables banao — prisma/schema.prisma ke models ke hisaab se.
-// Ye `prisma db push` ka bina-engine-download wala pakka alternative hai
-// (Rust-free Prisma Client ko runtime par koi engine nahi chahiye).
+// Create the database tables — matching the models in prisma/schema.prisma.
+// A reliable alternative to `prisma db push` that needs no engine download
+// (the Rust-free Prisma Client needs no engine at runtime).
 //   node scripts/init-db.mjs [db-path]
-// Default path: DATABASE_URL (file:...) ya data/pdf_qa.db
-import "dotenv/config"; // .env wala DATABASE_URL server se match kare
+// Default path: DATABASE_URL (file:...) or data/pdf_qa.db
+import "dotenv/config"; // so DATABASE_URL from .env matches the server
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";

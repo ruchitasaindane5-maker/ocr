@@ -1,6 +1,6 @@
 // Prisma Client (Rust-free, libSQL adapter) — database: data/pdf_qa.db
-// Saare DB operations Prisma ORM se hote hain (server/store.ts dekho).
-// Sirf FTS5 virtual table Prisma model nahi ban sakti, wo raw SQL se banti hai.
+// All DB operations go through Prisma ORM (see server/store.ts).
+// Only the FTS5 virtual table can't be a Prisma model, so it is created with raw SQL.
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -14,7 +14,7 @@ function resolveDbPath(): string {
   const url = process.env.DATABASE_URL;
   if (url?.startsWith("file:")) {
     const p = url.slice("file:".length).split("?")[0];
-    // prisma.config mein path prisma/ folder ke relative hai
+    // in prisma.config the path is relative to the prisma/ folder
     return path.isAbsolute(p) ? p : path.resolve(root, "prisma", p);
   }
   return path.join(root, "data", "pdf_qa.db");
@@ -26,9 +26,9 @@ fs.mkdirSync(path.dirname(DB_PATH), { recursive: true });
 const adapter = new PrismaLibSql({ url: `file:${DB_PATH}` });
 export const prisma = new PrismaClient({ adapter });
 
-// prisma/schema.prisma ke models ke hisaab se DDL — scripts/init-db.mjs
-// ke saath ek hi sach (parity) rakha gaya hai. IF NOT EXISTS ki wajah se
-// `prisma db push` wali DB par bhi chalana safe hai.
+// DDL matching the models in prisma/schema.prisma — kept in parity with
+// scripts/init-db.mjs. Thanks to IF NOT EXISTS it is also safe to run on a
+// database created by `prisma db push`.
 const SCHEMA_DDL = `
 CREATE TABLE IF NOT EXISTS "documents" (
     "id" TEXT NOT NULL PRIMARY KEY,
@@ -72,10 +72,10 @@ CREATE VIRTUAL TABLE IF NOT EXISTS chunks_fts USING fts5(
 `;
 
 /**
- * Server boot par database ready karo. Pehle ye nahi hota tha — fresh DB
- * par sirf chunks_fts banti thi aur pehli API call par Prisma error se
- * poora server crash ho jata tha. Ab tables na hon to khud ban jati hain
- * (`npm run db:setup` bhool bhi jao to server chalega).
+ * Prepare the database on server boot. This used to be missing — on a fresh DB
+ * only chunks_fts was created and the first API call crashed the whole server
+ * with a Prisma error. Now missing tables are created automatically
+ * (the server works even if you forget `npm run db:setup`).
  */
 let schemaReady: Promise<void> | null = null;
 export function ensureSchema(): Promise<void> {
@@ -92,19 +92,19 @@ export function ensureSchema(): Promise<void> {
   return schemaReady;
 }
 
-/** @deprecated ensureSchema use karo (wahi FTS bhi bana deta hai). */
+/** @deprecated use ensureSchema (it creates the FTS table too). */
 export async function ensureFtsTable(): Promise<void> {
   await ensureSchema();
 }
 
 const DOC_ID_RE = /^[A-Za-z0-9_-]{1,64}$/;
 
-/** Route se aaya doc id surakshit hai ya nahi (path traversal rokne ke liye). */
+/** Whether a doc id from a route is safe (prevents path traversal). */
 export function isValidDocId(id: unknown): id is string {
   return typeof id === "string" && DOC_ID_RE.test(id);
 }
 
-/** Ek document ke chunks ko FTS index mein (dobara) daalo. */
+/** (Re)insert a document's chunks into the FTS index. */
 export async function refreshFtsForDoc(docId: string): Promise<void> {
   if (!isValidDocId(docId)) return;
   await prisma.$executeRawUnsafe(`DELETE FROM chunks_fts WHERE doc_id = ?`, docId);

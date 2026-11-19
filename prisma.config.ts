@@ -1,7 +1,7 @@
 import { defineConfig } from "prisma/config";
 
-// SQLite file ka path schema (prisma/ folder) ke hisaab se banta hai,
-// isliye ../data/pdf_qa.db = project root ki data/pdf_qa.db
+// The SQLite file path is relative to the schema (prisma/ folder),
+// so ../data/pdf_qa.db = data/pdf_qa.db in the project root
 export default defineConfig({
   schema: "prisma/schema.prisma",
   migrations: { path: "prisma/migrations" },

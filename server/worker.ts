@@ -1,5 +1,5 @@
-// Python extraction worker ko chalana (PDF/OCR Python ka kaam hai,
-// database/API Prisma+Node ka). worker.py JSON result likhta hai.
+// Runs the Python extraction worker (PDF/OCR is Python's job,
+// database/API is Prisma+Node's). worker.py writes a JSON result.
 import { spawn } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
@@ -8,11 +8,12 @@ import type { Extracted } from "./store.js";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 
-// Ek PDF kitni der process ho sakti hai (default 15 min — badi scanned
-// PDF par OCR slow hota hai, lekin hamesha ke liye atakna nahi chahiye)
+// Stall timeout: the worker is killed only if NO page finishes for this long
+// (default 10 min). A fixed total limit failed big scanned PDFs — 960 pages of
+// OCR at ~5 s/page take over an hour — so the clock restarts after every page.
 const WORKER_TIMEOUT_MS = (() => {
   const n = Number(process.env.WORKER_TIMEOUT_MS);
-  return Number.isFinite(n) && n > 0 ? n : 15 * 60 * 1000;
+  return Number.isFinite(n) && n > 0 ? n : 10 * 60 * 1000;
 })();
 
 export function pythonBin(): string {
@@ -24,7 +25,10 @@ export function pythonBin(): string {
   return process.platform === "win32" ? "python" : "python3";
 }
 
-export function extractWithPython(pdfPath: string, ocrMode: string): Promise<Extracted> {
+export function extractWithPython(
+  pdfPath: string, ocrMode: string,
+  onProgress?: (done: number, total: number) => void,
+): Promise<Extracted> {
   const outJson = pdfPath + ".extracted.json";
   const cleanup = () => { try { fs.unlinkSync(outJson); } catch { /* ignore */ } };
   return new Promise((resolve, reject) => {
@@ -33,24 +37,39 @@ export function extractWithPython(pdfPath: string, ocrMode: string): Promise<Ext
       [path.join(root, "worker.py"), pdfPath, ocrMode, outJson],
       { cwd: root }
     );
-    let err = ""; // stderr cap — warna badi warning par memory bharti thi
+    let err = ""; // stderr cap — otherwise huge warnings filled memory
     proc.stderr.on("data", (d) => { if (err.length < 8000) err += d.toString(); });
-    proc.stdout.on("data", () => { /* stdout consume karo warna pipe bhar ke deadlock */ });
     let timedOut = false;
-    const timer = setTimeout(() => { timedOut = true; proc.kill("SIGKILL"); }, WORKER_TIMEOUT_MS);
+    let timer = setTimeout(() => { timedOut = true; proc.kill("SIGKILL"); }, WORKER_TIMEOUT_MS);
+    // Always consume stdout (otherwise the pipe fills up and deadlocks);
+    // each "PROGRESS done total" line restarts the stall timer.
+    let outBuf = "";
+    proc.stdout.on("data", (d) => {
+      outBuf += d.toString();
+      const lines = outBuf.split("\n");
+      outBuf = lines.pop() ?? "";
+      for (const line of lines) {
+        const m = /^PROGRESS (\d+) (\d+)/.exec(line.trim());
+        if (!m) continue;
+        clearTimeout(timer);
+        timer = setTimeout(() => { timedOut = true; proc.kill("SIGKILL"); }, WORKER_TIMEOUT_MS);
+        onProgress?.(Number(m[1]), Number(m[2]));
+      }
+      if (outBuf.length > 4000) outBuf = "";
+    });
     proc.on("error", (e) => {
       clearTimeout(timer);
       cleanup();
-      reject(new Error(`Python worker start nahi hua (${pythonBin()}): ${e.message}. ` +
-        `requirements.txt install kiya hai na? (pip install -r requirements.txt)`));
+      reject(new Error(`Python worker failed to start (${pythonBin()}): ${e.message}. ` +
+        `Is requirements.txt installed? (pip install -r requirements.txt)`));
     });
     proc.on("close", (code) => {
       clearTimeout(timer);
       if (timedOut) {
         cleanup();
         return reject(new Error(
-          `PDF process timeout ho gaya (${Math.round(WORKER_TIMEOUT_MS / 60000)} min). ` +
-          `File bahut badi hai ya OCR atak gaya — OCR mode 'never' ya chhoti file try karo.`));
+          `PDF processing stopped: no page finished for ${Math.round(WORKER_TIMEOUT_MS / 60000)} min, ` +
+          `so OCR looks stuck. Try again, or raise WORKER_TIMEOUT_MS in .env for very heavy pages.`));
       }
       if (code !== 0) {
         cleanup();
@@ -59,11 +78,11 @@ export function extractWithPython(pdfPath: string, ocrMode: string): Promise<Ext
       try {
         const data = JSON.parse(fs.readFileSync(outJson, "utf-8")) as Extracted;
         if (!data || !Array.isArray(data.pages) || typeof data.total_chars !== "number") {
-          throw new Error("worker ne adhoora result diya");
+          throw new Error("worker returned an incomplete result");
         }
         resolve(data);
       } catch (e) {
-        reject(new Error(`Worker result padh nahi paya: ${e}`));
+        reject(new Error(`Could not read worker result: ${e}`));
       } finally {
         cleanup();
       }

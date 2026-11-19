@@ -1,10 +1,10 @@
-// AI Fallback Chain — Ollama (Local) -> GLM -> NVIDIA -> Gemini
-// Ek fail hui (Ollama band, key galat, rate-limit, timeout) to dusri,
-// dusri fail to teesri... Sab fail to caller database-search jawab dega.
-// Cloud keys sirf .env se aati hain; Ollama ko key nahi chahiye (local PC).
+// AI Fallback Chain — Ollama (Local) -> GLM -> NVIDIA -> OpenRouter -> Gemini
+// If one fails (Ollama down, bad key, rate limit, timeout) the next one is tried,
+// and so on. If all fail, the caller returns the database-search answer.
+// Cloud keys come only from .env; Ollama needs no key (runs on the local PC).
 import type { Hit } from "./search.js";
 
-export type ProviderId = "ollama" | "glm" | "nvidia" | "gemini";
+export type ProviderId = "ollama" | "glm" | "nvidia" | "openrouter" | "gemini";
 
 interface Provider {
   id: ProviderId;
@@ -22,7 +22,7 @@ const env = (...names: string[]) => {
   return "";
 };
 
-/** Env se number — kharab value par default, warna NaN se timeout/context toot jata tha */
+/** Number from env — falls back to the default on bad values, otherwise NaN broke timeout/context */
 function envNumber(name: string, fallback: number): number {
   const n = Number(process.env[name]);
   return Number.isFinite(n) && n > 0 ? n : fallback;
@@ -36,9 +36,9 @@ export function getProviders(): Provider[] {
       name: "Ollama (Local PC)",
       keyEnvs: [],
       baseUrl: env("OLLAMA_HOST") || "http://localhost:11434",
-      // 16GB RAM + 6GB GPU ke liye best: ~4.7GB, zyada hissa GPU par, Hindi achhi
+      // Best for 16GB RAM + 6GB GPU: ~4.7GB, mostly on the GPU, good Hindi support
       model: env("OLLAMA_MODEL") || "qwen2.5:7b",
-      freeNote: "Bilkul free, bina internet/key — ollama pull " + (env("OLLAMA_MODEL") || "qwen2.5:7b"),
+      freeNote: "Completely free, no internet/key — ollama pull " + (env("OLLAMA_MODEL") || "qwen2.5:7b"),
     },
     {
       id: "glm",
@@ -46,7 +46,7 @@ export function getProviders(): Provider[] {
       name: "GLM (z.ai)",
       keyEnvs: ["GLM_API_KEY", "ZAI_API_KEY"],
       baseUrl: env("GLM_BASE_URL") || "https://api.z.ai/api/paas/v4",
-      model: env("GLM_MODEL") || "glm-4.7-flash", // z.ai par free model
+      model: env("GLM_MODEL") || "glm-4.7-flash", // free model on z.ai
       extraBody: { thinking: { type: "disabled" } },
       freeNote: "Free: glm-4.7-flash",
     },
@@ -56,8 +56,21 @@ export function getProviders(): Provider[] {
       name: "NVIDIA NIM",
       keyEnvs: ["NVIDIA_API_KEY"],
       baseUrl: env("NVIDIA_BASE_URL") || "https://integrate.api.nvidia.com/v1",
-      model: env("NVIDIA_MODEL") || "meta/llama-3.3-70b-instruct",
+      model: env("NVIDIA_MODEL") || "nvidia/nemotron-3.5-lightning-30b-a3b",
+      // Reasoning off — otherwise all max_tokens go to "thinking" and the answer comes back empty
+      extraBody: { chat_template_kwargs: { enable_thinking: false } },
       freeNote: "Free tier: build.nvidia.com key (nvapi-...)",
+    },
+    {
+      id: "openrouter",
+      kind: "cloud",
+      name: "OpenRouter",
+      keyEnvs: ["OPENROUTER_API_KEY"],
+      baseUrl: env("OPENROUTER_BASE_URL") || "https://openrouter.ai/api/v1",
+      model: env("OPENROUTER_MODEL") || "nvidia/nemotron-3.5-lightning:free", // ":free" models are free
+      // Reasoning off (avoids empty answers); models that can't disable reasoning return 400
+      extraBody: { reasoning: { enabled: false } },
+      freeNote: "Free: ':free' models (openrouter.ai/keys)",
     },
     {
       id: "gemini",
@@ -65,15 +78,16 @@ export function getProviders(): Provider[] {
       name: "Google Gemini",
       keyEnvs: ["GEMINI_API_KEY", "GOOGLE_API_KEY"],
       baseUrl: env("GEMINI_BASE_URL") || "https://generativelanguage.googleapis.com/v1beta/openai",
-      model: env("GEMINI_MODEL") || "gemini-2.5-flash", // free tier model
-      freeNote: "Free tier: gemini-2.5-flash",
+      // alias that tracks Google's current lite model — gemini-2.5-flash was closed to new users
+      model: env("GEMINI_MODEL") || "gemini-flash-lite-latest",
+      freeNote: "Free tier: gemini-flash-lite-latest",
     },
   ];
 }
 
 export function providerOrder(): Provider[] {
   const all = getProviders();
-  const wanted = (process.env.AI_PROVIDER_ORDER || "ollama,glm,nvidia,gemini")
+  const wanted = (process.env.AI_PROVIDER_ORDER || "ollama,glm,nvidia,openrouter,gemini")
     .split(",").map((s) => s.trim().toLowerCase()).filter(Boolean);
   const ordered = wanted
     .map((id) => all.find((p) => p.id === id))
@@ -101,7 +115,7 @@ export async function ollamaInfo(p?: Provider): Promise<OllamaInfo> {
         hasModel: models.some((m) => m === prov.model || m.startsWith(prov.model + ":")),
       };
     }
-  } catch { /* Ollama band hai — info default rahega */ } finally {
+  } catch { /* Ollama is not running — keep the default info */ } finally {
     clearTimeout(timer);
   }
   ollamaCache = { at: Date.now(), info };
@@ -116,12 +130,12 @@ export async function aiStatus() {
       const info = disabled ? { running: false, models: [], hasModel: false } : await ollamaInfo(p);
       providers.push({
         order: i + 1, id: p.id, name: p.name, model: p.model,
-        configured: info.running, key_env: "key nahi chahiye (local)",
+        configured: info.running, key_env: "no key needed (local)",
         status_text: disabled
-          ? "⏸ AI_MODE=off hai"
+          ? "⏸ AI_MODE=off"
           : info.running
-            ? (info.hasModel ? "✅ Chal raha hai · model ready" : "⚠️ Chal raha hai · model download baki hai")
-            : "⚠️ Chal nahi raha (Ollama app kholo)",
+            ? (info.hasModel ? "✅ Running · model ready" : "⚠️ Running · model not downloaded yet")
+            : "⚠️ Not running (open the Ollama app)",
         free_note: p.freeNote,
         models_downloaded: info.models,
       });
@@ -130,7 +144,7 @@ export async function aiStatus() {
       providers.push({
         order: i + 1, id: p.id, name: p.name, model: p.model,
         configured: has, key_env: p.keyEnvs[0],
-        status_text: disabled ? "⏸ AI_MODE=off hai" : has ? "✅ Key lagi hai" : "⚠️ Key nahi lagi",
+        status_text: disabled ? "⏸ AI_MODE=off" : has ? "✅ Key set" : "⚠️ Key not set",
         free_note: p.freeNote,
       });
     }
@@ -155,9 +169,9 @@ async function fetchWithTimeout(url: string, init: RequestInit, timeoutMs: numbe
   try {
     return await fetch(url, { ...init, signal: ctrl.signal });
   } catch (e: any) {
-    if (e?.name === "AbortError") throw new Error(`Timeout (${Math.round(timeoutMs / 1000)}s se zyada laga)`);
+    if (e?.name === "AbortError") throw new Error(`Timeout (took longer than ${Math.round(timeoutMs / 1000)}s)`);
     if (e?.cause?.code === "ECONNREFUSED" || /fetch failed/i.test(String(e?.message))) {
-      throw new Error("Connect nahi hua (server chal nahi raha / galat URL)");
+      throw new Error("Could not connect (server not running / wrong URL)");
     }
     throw e;
   } finally {
@@ -179,11 +193,11 @@ async function callCloud(p: Provider, messages: Msg[], maxTokens: number, timeou
   const raw = await r.text();
   if (!r.ok) {
     let msg = raw.slice(0, 200);
-    try { msg = JSON.parse(raw)?.error?.message || msg; } catch { /* raw hi rakho */ }
+    try { msg = JSON.parse(raw)?.error?.message || msg; } catch { /* keep raw */ }
     throw new Error(`HTTP ${r.status}: ${msg}`);
   }
   const text = JSON.parse(raw)?.choices?.[0]?.message?.content;
-  if (typeof text !== "string" || !text.trim()) throw new Error("Khali jawab aaya (empty response)");
+  if (typeof text !== "string" || !text.trim()) throw new Error("Empty response");
   return text.trim();
 }
 
@@ -197,7 +211,7 @@ async function callOllama(p: Provider, messages: Msg[], maxTokens: number, timeo
         model: p.model, messages, stream: false,
         options: {
           temperature: 0.2,
-          num_ctx: envNumber("OLLAMA_NUM_CTX", 8192), // PDF passages ke liye bada context
+          num_ctx: envNumber("OLLAMA_NUM_CTX", 8192), // large context for PDF passages
           num_predict: maxTokens,
         },
       }),
@@ -205,12 +219,12 @@ async function callOllama(p: Provider, messages: Msg[], maxTokens: number, timeo
   const raw = await r.text();
   if (!r.ok) {
     let msg = raw.slice(0, 200);
-    try { msg = JSON.parse(raw)?.error || msg; } catch { /* raw hi rakho */ }
-    if (/not found/i.test(msg)) msg = `Model download nahi hai — pehle chalao: ollama pull ${p.model}`;
+    try { msg = JSON.parse(raw)?.error || msg; } catch { /* keep raw */ }
+    if (/not found/i.test(msg)) msg = `Model not downloaded — run first: ollama pull ${p.model}`;
     throw new Error(`HTTP ${r.status}: ${msg}`);
   }
   const text = JSON.parse(raw)?.message?.content;
-  if (typeof text !== "string" || !text.trim()) throw new Error("Khali jawab aaya (empty response)");
+  if (typeof text !== "string" || !text.trim()) throw new Error("Empty response");
   return text.trim();
 }
 
@@ -221,9 +235,9 @@ function callProvider(p: Provider, messages: Msg[], maxTokens = 1024,
     : callCloud(p, messages, maxTokens, timeoutMs);
 }
 
-/** Fallback chain se AI jawab. Sab fail ho to null (caller DB jawab dega). */
+/** AI answer from the fallback chain. null if all fail (caller builds the DB answer). */
 export interface AiOutcome {
-  text: string | null; // null = koi AI nahi chala, database jawab bane
+  text: string | null; // null = no AI worked, use the database answer
   provider: string;
   model: string;
   attempts: Attempt[];
@@ -235,7 +249,7 @@ export async function generateAiAnswer(
   if ((process.env.AI_MODE || "").toLowerCase() === "off") {
     return { text: null, provider: "", model: "", attempts: [] };
   }
-  ollamaCache = null; // har sawaal par Ollama ki taaza halat check karo
+  ollamaCache = null; // check Ollama's current state on every question
   const context = hits
     .map((h) => `[Source: ${h.doc_name}, page ${h.page}]\n${h.text.slice(0, 1200)}`)
     .join("\n\n");
@@ -243,29 +257,29 @@ export async function generateAiAnswer(
     {
       role: "system",
       content:
-        "Tum ek PDF assistant ho. Sirf diye gaye PDF passages ki base par jawab do, " +
-        "bahar ki jaankari mat jodo. Jawab passages mein naa ho to saaf kaho ki PDF mein nahi mila.",
+        "You are a PDF assistant. Answer only from the given PDF passages and do not add " +
+        "outside information. If the answer is not in the passages, say clearly that it was not found in the PDF.",
     },
     {
       role: "user",
       content:
-        `PASSAGES:\n${context}\n\nSAWAAL: ${question}\n\n` +
-        "Jawab usi bhasha mein do jismein sawaal hai (Hindi/Hinglish/English). " +
-        "Aakhir mein sources is format mein likho: (Source: file-name, page X)",
+        `PASSAGES:\n${context}\n\nQUESTION: ${question}\n\n` +
+        "Answer in English. " +
+        "At the end, list sources in this format: (Source: file-name, page X)",
     },
   ];
   const attempts: Attempt[] = [];
   for (const p of providerOrder()) {
     if (p.kind === "ollama") {
       const info = await ollamaInfo(p);
-      if (!info.running) continue; // Ollama band hai to chup-chaap agli API
+      if (!info.running) continue; // Ollama is down — silently try the next API
       if (!info.hasModel) {
         attempts.push({ provider: p.name, model: p.model, ok: false, ms: 0,
-                        error: `Model nahi hai — ollama pull ${p.model}` });
+                        error: `Model not downloaded — ollama pull ${p.model}` });
         continue;
       }
     } else if (!env(...p.keyEnvs)) {
-      continue; // key hi nahi hai to try hi mat karo
+      continue; // no key — don't even try
     }
     const t0 = Date.now();
     try {
@@ -277,14 +291,14 @@ export async function generateAiAnswer(
         provider: p.name, model: p.model, ok: false, ms: Date.now() - t0,
         error: String(e?.message || e).slice(0, 200),
       });
-      // fail hua -> chain ki agli API try hogi
+      // failed -> the next API in the chain is tried
     }
   }
-  // Sab fail — attempts bhi bhejo taaki UI bata sake ki AI try hua tha
+  // All failed — still return attempts so the UI can show that AI was tried
   return { text: null, provider: "", model: "", attempts };
 }
 
-/** UI ke "keys test karo" button ke liye — har provider ko chhota test call. */
+/** For the UI "test keys" button — a small test call to each provider. */
 export async function testAiProviders() {
   const results: (Attempt & { configured: boolean; skipped?: string })[] = [];
   ollamaCache = null;
@@ -293,17 +307,17 @@ export async function testAiProviders() {
       const info = await ollamaInfo(p);
       if (!info.running) {
         results.push({ provider: p.name, model: p.model, ok: false, ms: 0,
-                       configured: false, skipped: "Ollama chal nahi raha — pehle Ollama app/serve chalao" });
+                       configured: false, skipped: "Ollama not running — start the Ollama app/serve first" });
         continue;
       }
       if (!info.hasModel) {
         results.push({ provider: p.name, model: p.model, ok: false, ms: 0,
-                       configured: true, error: `Model download nahi hai — ollama pull ${p.model}` });
+                       configured: true, error: `Model not downloaded — ollama pull ${p.model}` });
         continue;
       }
       const t0 = Date.now();
       try {
-        await callOllama(p, [{ role: "user", content: "Sirf 'OK' likho." }], 16, 60000);
+        await callOllama(p, [{ role: "user", content: "Reply with just 'OK'." }], 16, 60000);
         results.push({ provider: p.name, model: p.model, ok: true, ms: Date.now() - t0, configured: true });
       } catch (e: any) {
         results.push({ provider: p.name, model: p.model, ok: false, ms: Date.now() - t0,
@@ -313,12 +327,13 @@ export async function testAiProviders() {
     }
     if (!env(...p.keyEnvs)) {
       results.push({ provider: p.name, model: p.model, ok: false, ms: 0,
-                     configured: false, skipped: "key nahi lagi" });
+                     configured: false, skipped: "key not set" });
       continue;
     }
     const t0 = Date.now();
     try {
-      await callCloud(p, [{ role: "user", content: "Sirf 'OK' likho." }], 16, 30000);
+      // 16 tokens is too few for reasoning models (nemotron, ernie) — the answer came back empty
+      await callCloud(p, [{ role: "user", content: "Reply with just 'OK'." }], 512, 30000);
       results.push({ provider: p.name, model: p.model, ok: true, ms: Date.now() - t0, configured: true });
     } catch (e: any) {
       results.push({ provider: p.name, model: p.model, ok: false, ms: Date.now() - t0,

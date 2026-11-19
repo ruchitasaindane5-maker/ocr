@@ -1,17 +1,17 @@
-"""PDF -> saaf, proper text (page by page) - kisi bhi tarah ki PDF ke liye.
+"""PDF -> clean, proper text (page by page) - for any kind of PDF.
 
-Har PDF alag hoti hai, isliye extraction kai layer mein hoti hai:
-  1. Embedded text layer, block-based reading-order ke saath
-     (multi-column par pehle left column, phir right).
-  2. Tables alag se structured lines mein (cell | cell | cell), taaki
-     table ka data flatten hokar bhi khoye nahi.
-  3. Form fields (AcroForm) ke values bhi text mein jodte hain.
-  4. Cleaning: duplicate lines, "S H U R U" spaced letters, hyphen se
-     tute shabd, aur har page par dohraaye jaane wale header/footer
-     (60%+ pages par same line) hata diye jate hain.
-  5. OCR (auto): scanned page (text < 80 chars), bade screenshot wale
-     page, ya kharab/garbage text-layer par page render karke OCR.
-     OCR text embedded ke saath dedupe karke merge hota hai.
+Every PDF is different, so extraction happens in several layers:
+  1. Embedded text layer, with block-based reading order
+     (on multi-column pages the left column first, then the right).
+  2. Tables as separate structured lines (cell | cell | cell), so
+     table data is not lost when flattened.
+  3. Form field (AcroForm) values are added to the text as well.
+  4. Cleaning: duplicate lines, "S T A R T" spaced letters, hyphen-broken
+     words, and headers/footers repeated on every page
+     (same line on 60%+ of pages) are removed.
+  5. OCR (auto): scanned pages (text < 80 chars), pages with large
+     screenshots, or a bad/garbage text layer are rendered and OCR'd.
+     OCR text is deduplicated against the embedded text and merged.
 """
 from __future__ import annotations
 
@@ -22,14 +22,14 @@ import pymupdf
 
 from . import ocr as ocr_mod
 
-MIN_TEXT_CHARS = 80          # isse kam = scanned page maano
-BIG_IMAGE_AREA_RATIO = 0.25  # page ka 25%+ image = screenshot probable
-OCR_ZOOM_SCANNED = 3.0       # scanned page ke liye ~216 DPI
+MIN_TEXT_CHARS = 80          # fewer than this = treat as a scanned page
+BIG_IMAGE_AREA_RATIO = 0.25  # 25%+ of the page is an image = probably a screenshot
+OCR_ZOOM_SCANNED = 3.0       # ~216 DPI for scanned pages
 OCR_ZOOM_MERGE = 2.2
 
 
 def _fix_spaced_letters(line: str) -> str:
-    """'S H U R U  K A R N E' -> 'SHURU KARNE'."""
+    """'G E T  S T A R T E D' -> 'GET STARTED'."""
     tokens = line.split()
     if len(tokens) < 4:
         return line
@@ -51,8 +51,8 @@ def _fix_spaced_letters(line: str) -> str:
 
 
 def _halve_doubled_tokens(line: str) -> str:
-    """'WHATSAPPWHATSAPP AGENTAGENT' -> 'WHATSAPP AGENT' (duplicate layer
-    chipak jaane se bane dohre shabd)."""
+    """'WHATSAPPWHATSAPP AGENTAGENT' -> 'WHATSAPP AGENT' (doubled words
+    caused by a duplicate text layer glued together)."""
     out = []
     for tok in line.split(" "):
         if len(tok) >= 8 and len(tok) % 2 == 0 and tok[: len(tok) // 2] == tok[len(tok) // 2:]:
@@ -62,7 +62,7 @@ def _halve_doubled_tokens(line: str) -> str:
 
 
 def _keep_ocr_line(line: str) -> bool:
-    """OCR ki garbage lines (ulta/kaata text, symbol junk) roko."""
+    """Drop garbage OCR lines (upside-down/cut-off text, symbol junk)."""
     s = line.strip()
     if len(s) < 3:
         return False
@@ -72,14 +72,14 @@ def _keep_ocr_line(line: str) -> bool:
 
 
 def clean_text(raw: str) -> str:
-    raw = re.sub(r"([A-Za-z])-\n([a-z])", r"\1\2", raw or "")  # hyphen-tute shabd jodo
+    raw = re.sub(r"([A-Za-z])-\n([a-z])", r"\1\2", raw or "")  # rejoin hyphen-broken words
     lines, prev, seen_long = [], None, set()
     for line in raw.splitlines():
         line = _halve_doubled_tokens(
             _fix_spaced_letters(re.sub(r"[ \t]+", " ", line).strip()))
         if not line or line == prev:
             continue
-        # poore page mein dohraayi lambi line (duplicate text-layer) ek hi baar
+        # a long line repeated across the page (duplicate text layer) only once
         if len(line) > 50:
             key = line.lower()
             if key in seen_long:
@@ -95,7 +95,7 @@ def _norm_key(line: str) -> str:
 
 
 def merge_texts(base: str, extra: str) -> str:
-    """extra ki sirf nayi lines add karo (duplicate OCR/text na aaye)."""
+    """Add only the new lines from extra (no duplicate OCR/text)."""
     seen = {_norm_key(ln) for ln in base.splitlines() if _norm_key(ln)}
     merged = base.splitlines()
     for line in extra.splitlines():
@@ -110,7 +110,7 @@ def merge_texts(base: str, extra: str) -> str:
 
 
 def _text_quality(text: str) -> float:
-    """0..1 - kitna saaf text hai (garbage layer pehchanne ke liye)."""
+    """0..1 - how clean the text is (to detect a garbage layer)."""
     if not text:
         return 0.0
     ok = sum(1 for ch in text if ch.isalnum() or ch.isspace() or ch in ".,;:!?()[]|/-–—'\"₹%")
@@ -131,16 +131,16 @@ def _image_area_ratio(page) -> float:
 
 
 def _layout_text(page) -> str:
-    """Block-based reading order. Multi-column page par pehle poora left
-    column, phir right column - warna same height ki lines mix ho jati
-    hain. Full-width header/footer alag se pehle aata hai."""
+    """Block-based reading order. On multi-column pages the whole left
+    column comes first, then the right column - otherwise lines at the same
+    height get mixed. Full-width headers/footers are handled separately."""
     try:
         blocks = [b for b in page.get_text("blocks") if b[6] == 0 and b[4].strip()]
     except Exception:
         return page.get_text("text", sort=True)
     if len(blocks) < 3:
-        # kam blocks ho to block ko poora rakho (line-mixing nahi hoga):
-        # pehle upar-wala, phir left-wala block pura
+        # with few blocks keep each block whole (no line mixing):
+        # top block first, then the left block in full
         blocks.sort(key=lambda b: (round(b[1] / 4), b[0]))
         return "\n".join(b[4].strip() for b in blocks)
     width = page.rect.width
@@ -170,9 +170,9 @@ def _layout_text(page) -> str:
     right = sorted([b for b in blocks if b[0] >= split - 2 and b not in wide],
                    key=lambda b: (b[1], b[0]))
     rest = [b for b in blocks if b not in wide + left + right]
-    # Full-width block apni asal jagah par rakho: column shuru hone se
-    # upar wala header pehle, baaki (footer) sabse aakhir mein. Pehle saare
-    # wide blocks upar aa jate the — footer bhi page ke top par dikhta tha.
+    # Keep full-width blocks in their real position: a header above where the
+    # columns start comes first, the rest (footer) goes last. Previously all
+    # wide blocks moved to the top — even the footer showed up at the top.
     col_top = min([b[1] for b in left + right], default=0)
     header = sorted([b for b in wide if b[1] <= col_top + 2], key=lambda b: b[1])
     footer = sorted([b for b in wide if b[1] > col_top + 2], key=lambda b: b[1])
@@ -181,7 +181,7 @@ def _layout_text(page) -> str:
 
 
 def _tables_text(page) -> tuple[str, int]:
-    """Page ki tables ko 'cell | cell' lines mein badlo."""
+    """Convert the page's tables into 'cell | cell' lines."""
     try:
         tables = page.find_tables().tables
     except Exception:
@@ -212,7 +212,7 @@ def _form_text(page) -> str:
 
 
 def _strip_boilerplate(pages: list[dict]) -> int:
-    """Har page par dohraaya header/footer (page ki pehchan nahi) hatao."""
+    """Remove headers/footers repeated on every page (they don't identify a page)."""
     if len(pages) < 3:
         return 0
     freq = Counter()
@@ -230,17 +230,19 @@ def _strip_boilerplate(pages: list[dict]) -> int:
     return removed
 
 
-def extract_pdf(path: str, ocr_mode: str = "auto") -> dict:
-    """ocr_mode: 'auto' | 'always' | 'never'."""
+def extract_pdf(path: str, ocr_mode: str = "auto", progress=None) -> dict:
+    """ocr_mode: 'auto' | 'always' | 'never'.
+    progress: optional callback(done_pages, total_pages), called after every page."""
     if ocr_mode not in ("auto", "always", "never"):
         ocr_mode = "auto"
     engine = ocr_mod.detect_engine() if ocr_mode != "never" else None
     doc = pymupdf.open(path)
     if doc.needs_pass:
         doc.close()
-        raise ValueError("Ye PDF password-protected hai - pehle password hatao.")
+        raise ValueError("This PDF is password-protected - remove the password first.")
     metadata = {k: v for k, v in (doc.metadata or {}).items() if v}
     pages, tables_total, warnings = [], 0, []
+    total_pages = len(doc)
     for page_no, page in enumerate(doc, start=1):
         embedded = clean_text(_layout_text(page))
         tables_txt, n_tables = _tables_text(page)
@@ -254,12 +256,12 @@ def extract_pdf(path: str, ocr_mode: str = "auto") -> dict:
         method, text = "text", embedded
         garbage = len(embedded) >= MIN_TEXT_CHARS and _text_quality(embedded) < 0.55
         if not engine and ocr_mode != "never" and len(embedded) < MIN_TEXT_CHARS:
-            # Scanned page mila par OCR engine hi nahi — wajah chhupao mat,
-            # UI/user ko batao taaki wo engine install kare
+            # Scanned page but no OCR engine — don't hide the reason,
+            # tell the UI/user so they can install an engine
             warnings.append(
-                f"Page {page_no}: scanned hai par OCR engine nahi mila"
+                f"Page {page_no}: is scanned but no OCR engine was found"
                 + (f" ({ocr_mod.last_error()})" if ocr_mod.last_error() else "")
-                + " — pip install opencv-python-headless rapidocr-onnxruntime --no-deps try karo"
+                + " — try: pip install opencv-python-headless rapidocr-onnxruntime --no-deps"
             )
         want_ocr = bool(engine) and (
             ocr_mode == "always"
@@ -269,8 +271,8 @@ def extract_pdf(path: str, ocr_mode: str = "auto") -> dict:
         if want_ocr:
             scanned = len(embedded) < MIN_TEXT_CHARS
             zoom = OCR_ZOOM_SCANNED if scanned else OCR_ZOOM_MERGE
-            # Bahut badi page (poster/A3) par pixmap memory kha jata tha —
-            # takreeban 30MP par cap lagao, quality par khaas farak nahi padta
+            # On very large pages (poster/A3) the pixmap ate memory —
+            # cap at roughly 30MP; quality barely changes
             max_px = 30_000_000
             area = page.rect.width * page.rect.height * zoom * zoom
             if area > max_px:
@@ -285,6 +287,8 @@ def extract_pdf(path: str, ocr_mode: str = "auto") -> dict:
                 else:
                     text, method = merge_texts(embedded, ocr_text), f"text+ocr:{engine}"
         pages.append({"page": page_no, "text": text, "method": method})
+        if progress:
+            progress(page_no, total_pages)
     boiler_removed = _strip_boilerplate(pages)
     doc.close()
     return {

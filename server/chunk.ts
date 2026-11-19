@@ -1,4 +1,5 @@
-// Text tokenize + chunking (Python version ka TS port, bina AI ke search ke liye)
+// Text tokenize + chunking (TS port of the Python version, for search without AI)
+// Hindi/Hinglish stopwords are intentional so Hinglish questions still match.
 export const STOPWORDS = new Set(
   `the a an is are was were what how why when where who which in on of to for
    and or ke ka ki hai hain kya kaise karna kare mujhe batao bataiye me mein ye

@@ -1,13 +1,13 @@
-"""Sawaal -> database search -> jawab. 100% bina AI ke.
+"""Question -> database search -> answer. 100% without AI.
 
-Koi LLM, koi API key, koi embedding model nahi. Jawab SQLite database
-mein FTS5/BM25 search se mile sabse relevant page-hisso ko jod kar
-banta hai, har hisse ke saath (file, page) citation ke saath.
+No LLM, no API key, no embedding model. The answer is built by joining the
+most relevant page passages found by FTS5/BM25 search in the SQLite
+database, each with a (file, page) citation.
 
-Sach baat: bina AI ke system jawab "likhta" nahi hai - ye PDF mein se
-wo hisse nikal kar deta hai jinmein tumhare sawaal ke shabd mile hain.
-Isliye sawaal mein PDF ke hi shabd (jaise "UPI QR", "Step 3") use
-karne se sabse sahi result milta hai.
+To be honest: without AI the system does not "write" an answer - it pulls
+out the passages of the PDF that contain the words of your question.
+So using the PDF's own words in the question (such as "UPI QR", "Step 3")
+gives the most accurate results.
 """
 from __future__ import annotations
 
@@ -17,8 +17,8 @@ from .store import STOPWORDS, Store, tokenize
 
 
 def _extractive_answer(question: str, hits: list[dict], store: Store) -> str:
-    """Sabse matching line ke aas-paas ka pura hissa uthao (table/context
-    akeli line katne se toot jata hai)."""
+    """Take the whole passage around the best-matching line (a lone line
+    breaks tables/context)."""
     q_terms = {t for t in tokenize(question) if t not in STOPWORDS}
     if not q_terms:
         q_terms = set(tokenize(question))
@@ -31,12 +31,12 @@ def _extractive_answer(question: str, hits: list[dict], store: Store) -> str:
             matched = q_terms & set(tokenize(line))
             if not matched:
                 continue
-            # rare shabd (zyada IDF) milna aam shabd se zyada important
+            # matching a rare word (higher IDF) matters more than a common one
             score = sum(store.term_idf(t) for t in matched) - hit_rank * 0.3
             window = " ".join(x for x in lines[max(0, i - 1): i + 5] if x)
             candidates.append((score, window, h))
     candidates.sort(key=lambda x: -x[0])
-    # Milte-julte hisse dobara mat dikhao (shabd-overlap se pehchano)
+    # Don't show near-duplicate passages (detected by word overlap)
     picked, picked_tokens = [], []
     for _, window, h in candidates:
         toks = set(tokenize(window))
@@ -49,7 +49,7 @@ def _extractive_answer(question: str, hits: list[dict], store: Store) -> str:
             break
     if not picked:
         picked = [(hits[0]["text"][:500], hits[0])]
-    lines = ["Database mein mile sabse relevant hisso ke hisaab se:\n"]
+    lines = ["Based on the most relevant passages found in the database:\n"]
     for window, h in picked:
         lines.append(f"• {window}  — ({h['doc_name']}, page {h['page']})")
     return "\n".join(lines)
@@ -59,11 +59,11 @@ def answer_question(store: Store, question: str, doc_id: str | None = None,
                     top_k: int = 5) -> dict:
     hits = store.search(question, doc_id=doc_id, top_k=top_k)
     if not hits:
-        docs = ", ".join(d["name"] for d in store.list_docs()) or "koi PDF nahi"
-        return {"answer": "Is sawaal ke shabd kisi PDF mein nahi mile.\n"
-                          f"Database mein abhi ye PDFs hain: {docs}\n"
-                          "Tip: PDF mein use hue exact shabd try karo "
-                          "(jaise heading ya step ka naam).",
+        docs = ", ".join(d["name"] for d in store.list_docs()) or "no PDFs"
+        return {"answer": "The words in this question were not found in any PDF.\n"
+                          f"PDFs currently in the database: {docs}\n"
+                          "Tip: try the exact words used in the PDF "
+                          "(such as a heading or step name).",
                 "sources": [], "mode": "database-search"}
     sources, seen = [], set()
     for h in hits:

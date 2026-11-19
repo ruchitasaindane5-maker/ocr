@@ -1,3 +1,3 @@
-PDF daalo, sawaal puchho — jawab page number ke saath. 📄
-Scanned/screenshot PDF par OCR, Prisma database mein save, aur AI fail ho jaye to bhi jawab rukta nahi (Ollama → GLM → NVIDIA → Gemini).
-Poora Setup → Run → Use guide: 2-minute video + Word guide (Hinglish & English) repo mein hai.
+Drop in a PDF, ask a question — get the answer with page numbers. 📄
+OCR for scanned/screenshot PDFs, saved in a Prisma database, and answers keep coming even if the AI fails (Ollama → GLM → NVIDIA → OpenRouter → Gemini).
+Full Setup → Run → Use guide: a 2-minute video + Word guides (Hinglish & English) are in the repo.

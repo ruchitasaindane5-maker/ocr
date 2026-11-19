@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="hi">
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -63,6 +63,8 @@
   .prog i{display:block;height:100%;width:38%;border-radius:99px;background:linear-gradient(90deg,var(--acc),var(--acc2));
     animation:slide 1.1s ease-in-out infinite alternate}
   @keyframes slide{from{transform:translateX(-60%)}to{transform:translateX(230%)}}
+  /* real page progress once the server reports it */
+  .prog.det i{animation:none;transform:none;transition:width .4s}
   .result{font-size:13px;margin-top:8px;padding:8px 10px;border-radius:9px;line-height:1.5}
   .result.ok{background:rgba(52,211,153,.09);border:1px solid rgba(52,211,153,.35);color:#bbf7d0}
   .result.bad{background:rgba(248,113,113,.09);border:1px solid rgba(248,113,113,.35);color:#fecaca}
@@ -141,7 +143,7 @@
   .dlgBtns{display:flex;gap:8px;justify-content:flex-end;margin-top:12px;flex-wrap:wrap}
   .hint{font-size:12.5px;color:var(--mut);line-height:1.6}
 
-  /* Chat empty-state: naye user ke liye 3 steps */
+  /* Chat empty state: 3 steps for new users */
   .steps{display:flex;flex-direction:column;gap:8px;max-width:88%;align-self:flex-start;width:100%}
   .step{display:flex;gap:11px;align-items:flex-start;background:rgba(91,140,255,.05);
     border:1px dashed var(--line);border-radius:12px;padding:10px 13px;font-size:13.5px;color:var(--mut);line-height:1.55}
@@ -149,15 +151,15 @@
     background:linear-gradient(135deg,var(--acc),var(--acc2));color:#fff;font-weight:700;font-size:13px}
   .step b{color:var(--txt)}
 
-  /* Chat: neeche jaane wala floating button */
+  /* Chat: floating scroll-down button */
   #scrollDown{position:absolute;right:20px;bottom:128px;z-index:6;border-radius:99px;
     padding:8px 14px;font-size:12.5px;box-shadow:var(--sh);opacity:0;pointer-events:none;transform:translateY(6px)}
   #scrollDown.show{opacity:1;pointer-events:auto;transform:none}
   #askHint{margin-top:7px;font-size:11.5px;color:#6d7c9c}
-  @media(max-width:640px){ #q{font-size:16px} } /* iOS par focus-zoom rokne ke liye */
-  @media(max-width:900px){ #chatCard{position:relative} } /* floating button ka anchor */
+  @media(max-width:640px){ #q{font-size:16px} } /* prevents focus-zoom on iOS */
+  @media(max-width:900px){ #chatCard{position:relative} } /* anchor for the floating button */
 
-  /* Doc card: download wali dusri halki row */
+  /* Doc card: lighter second row for downloads */
   .doc .exp{display:flex;gap:6px;align-items:center;margin-top:7px;flex-wrap:wrap}
   .doc .exp span{font-size:11.5px;color:var(--mut);margin-right:1px}
 </style>
@@ -171,27 +173,27 @@
     <span class="badge">🔍 <span id="ocrBadge">OCR: …</span></span>
     <span class="badge">🗄️ <span id="dbBadge">Database: …</span></span>
     <span class="sp"></span>
-    <span class="sub">PDF daalo → OCR/text database mein save → sawaal ka jawab page number ke saath</span>
+    <span class="sub">Add a PDF → OCR/text saved to the database → answers with page numbers</span>
   </div>
 </header>
-<div id="offlineBar">⚠️ Server se connect nahi ho pa raha. <b>npm start</b> chala hai na?
-  <button class="ghost" id="retryBtn">Dobara try karo</button></div>
+<div id="offlineBar">⚠️ Cannot connect to the server. Is <b>npm start</b> running?
+  <button class="ghost" id="retryBtn">Try again</button></div>
 
 <main>
   <div id="side">
     <section class="card">
-      <h2>1️⃣ PDF upload karo</h2>
-      <p class="sub2">Digital, scanned ya screenshot wali — har PDF chalegi. Data <b>Prisma database</b> mein save hota hai.</p>
-      <div id="drop" tabindex="0" role="button" aria-label="PDF file choose karo ya yahan drop karo">
+      <h2>1️⃣ Upload a PDF</h2>
+      <p class="sub2">Digital, scanned or screenshot PDFs — all work. Data is saved in the <b>Prisma database</b>.</p>
+      <div id="drop" tabindex="0" role="button" aria-label="Choose one or more PDF files or drop them here">
         <div style="font-size:30px">📥</div>
-        <div class="big">PDF yahan drag &amp; drop karo</div>
-        <div>ya click karke choose karo · ek saath kai files chalengi</div>
+        <div class="big">Drag &amp; drop one or more PDFs here</div>
+        <div>or click to choose · hold <b>Ctrl</b>/<b>Shift</b> to select several · up to 20 at once</div>
       </div>
       <input type="file" id="file" accept="application/pdf,.pdf" multiple hidden>
       <div class="prog" id="upProg"><i></i></div>
       <div id="upStatus" aria-live="polite"></div>
       <label class="chk"><input type="checkbox" id="ocrAlways">
-        <span><b>Har page par OCR chalao</b> — slow hai, lekin screenshots ke andar ka text pakka milega. (Auto mode mein scanned/screenshot page par OCR khud chal jata hai.)</span></label>
+        <span><b>Run OCR on every page</b> — slower, but text inside screenshots is always captured. (In auto mode OCR runs automatically on scanned/screenshot pages.)</span></label>
     </section>
 
     <section class="card">
@@ -203,61 +205,64 @@
         <tr><td>Search chunks</td><td id="dbChunks">–</td></tr>
         <tr><td>Database size</td><td id="dbSize">–</td></tr>
       </table>
-      <p class="hint" style="margin:8px 0 0">Server band karke kholne par bhi data wahi rahega — dobara upload nahi karna padega.</p>
+      <p class="hint" style="margin:8px 0 0">Data persists across server restarts — no need to upload again.</p>
     </section>
 
     <section class="card">
-      <h2>🤖 AI jawab <span style="color:var(--mut);font-weight:500;font-size:12px">fallback chain</span></h2>
-      <p class="sub2">Order: <b>Ollama (local) → GLM → NVIDIA → Gemini</b>. Ek fail to agli; sab fail to database-search jawab.</p>
-      <div id="aiList"><p class="hint">Check ho raha hai…</p></div>
-      <button class="ghost" id="testAiBtn" style="margin-top:10px">🔑 Sab AI Test Karo</button>
+      <h2>🤖 AI answers <span style="color:var(--mut);font-weight:500;font-size:12px">fallback chain</span></h2>
+      <p class="sub2">Order: <b>Ollama (local) → GLM → NVIDIA → OpenRouter → Gemini</b>. If one fails the next is tried; if all fail you get the database-search answer.</p>
+      <div id="aiList"><p class="hint">Checking…</p></div>
+      <button class="ghost" id="testAiBtn" style="margin-top:10px">🔑 Test All AI</button>
       <div id="aiTestResult" aria-live="polite"></div>
-      <p class="hint" style="margin-top:10px">Keys <b>.env</b> file mein lagti hain. Ollama ko key nahi chahiye — PC par <code>ollama pull qwen2.5:7b</code> chalao.</p>
+      <p class="hint" style="margin-top:10px">Keys go in the <b>.env</b> file. Ollama needs no key — run <code>ollama pull qwen2.5:7b</code> on your PC.</p>
     </section>
 
     <section class="card">
-      <h2>📚 Tumhari PDFs</h2>
-      <input type="text" id="docSearch" class="search" placeholder="🔎 PDF dhundho…" aria-label="PDF search">
-      <div id="docs"><div class="empty">Abhi koi PDF nahi hai.<br>Upar se pehli PDF upload karo 👆</div></div>
+      <h2>📚 Your PDFs
+        <span style="margin-left:auto"></span>
+        <button class="danger mini" id="delAllBtn" title="Delete every PDF from the database" hidden>🗑 Delete all</button>
+      </h2>
+      <input type="text" id="docSearch" class="search" placeholder="🔎 Search PDFs…" aria-label="PDF search">
+      <div id="docs"><div class="empty">No PDFs yet.<br>Upload your first PDF above 👆</div></div>
     </section>
   </div>
 
   <section class="card" id="chatCard">
-    <h2>2️⃣ Sawaal puchho
+    <h2>2️⃣ Ask a question
       <span style="margin-left:auto"></span>
-      <button class="ghost mini" id="clearChat" title="Chat saaf karo">🧹 Chat saaf</button>
+      <button class="ghost mini" id="clearChat" title="Clear the chat">🧹 Clear chat</button>
     </h2>
     <div class="chatTools">
-      <select id="docFilter" aria-label="Kis PDF mein dhundhna hai">
-        <option value="">🌐 Sabhi PDFs mein dhundho</option>
+      <select id="docFilter" aria-label="Which PDF to search">
+        <option value="">🌐 Search all PDFs</option>
       </select>
     </div>
     <div id="msgs" aria-live="polite"></div>
     <div class="chips" id="chips"></div>
     <div id="askrow">
-      <textarea id="q" rows="1" placeholder="Apna sawaal likho…" aria-label="Sawaal"></textarea>
-      <button id="askBtn">Bhejo ➤</button>
+      <textarea id="q" rows="1" placeholder="Type your question…" aria-label="Question"></textarea>
+      <button id="askBtn">Send ➤</button>
     </div>
-    <div id="askHint">Enter = bhejo · Shift+Enter = nayi line · Jawab hamesha page number ke saath aata hai</div>
-    <button id="scrollDown" class="ghost" title="Sabse naye jawab par jao">⬇ Neeche</button>
+    <div id="askHint">Enter = send · Shift+Enter = new line · Answers always include page numbers</div>
+    <button id="scrollDown" class="ghost" title="Jump to the latest answer">⬇ Latest</button>
   </section>
 </main>
 
-<dialog id="textDlg" aria-label="PDF ka extracted text">
+<dialog id="textDlg" aria-label="Extracted PDF text">
   <h3 id="dlgTitle" style="margin:0 0 8px;font-size:15px"></h3>
   <pre id="dlgBody"></pre>
   <div class="dlgBtns">
-    <button class="ghost" id="copyTextBtn">📋 Text copy karo</button>
-    <button id="closeTextBtn">Band karo</button>
+    <button class="ghost" id="copyTextBtn">📋 Copy text</button>
+    <button id="closeTextBtn">Close</button>
   </div>
 </dialog>
 
-<dialog id="confirmDlg" aria-label="Pakka karo">
-  <h3 style="margin:0 0 6px;font-size:15px">🗑 PDF hataun?</h3>
+<dialog id="confirmDlg" aria-label="Confirm">
+  <h3 id="confirmTitle" style="margin:0 0 6px;font-size:15px">🗑 Delete this PDF?</h3>
   <p class="hint" id="confirmMsg" style="margin:0"></p>
   <div class="dlgBtns">
-    <button class="ghost" id="confirmNo">Nahi, rehne do</button>
-    <button class="danger" id="confirmYes" style="background:rgba(248,113,113,.16);font-weight:700">Haan, hata do</button>
+    <button class="ghost" id="confirmNo">No, keep it</button>
+    <button class="danger" id="confirmYes" style="background:rgba(248,113,113,.16);font-weight:700">Yes, delete</button>
   </div>
 </dialog>
 
@@ -273,7 +278,7 @@ function toast(msg,type='ok'){ const t=document.createElement('div'); t.classNam
   $('#toasts').appendChild(t); setTimeout(()=>{t.style.opacity='0';t.style.transition='opacity .3s'; setTimeout(()=>t.remove(),320);},4200); }
 
 async function api(url,opts={}){ const r=await fetch(url,opts); let data=null;
-  try{ data=await r.json(); }catch{ /* JSON nahi aaya */ }
+  try{ data=await r.json(); }catch{ /* response was not JSON */ }
   if(!r.ok) throw new Error((data&&data.error)||('Server error '+r.status));
   return data; }
 
@@ -284,7 +289,7 @@ async function refreshStatus(){
   try{
     const s=await api('/api/status');
     $('#offlineBar').classList.remove('show');
-    $('#ocrBadge').textContent='OCR: '+(s.ocr_engine||'nahi mila (sirf text layer)');
+    $('#ocrBadge').textContent='OCR: '+(s.ocr_engine||'not found (text layer only)');
     const d=s.database||{};
     $('#dbBadge').textContent=`Prisma · ${fmtN(d.docs)} PDFs · ${fmtN(d.pages)} pages`;
     $('#dbDocs').textContent=fmtN(d.docs); $('#dbPages').textContent=fmtN(d.pages);
@@ -293,53 +298,53 @@ async function refreshStatus(){
     return true;
   }catch(e){
     $('#offlineBar').classList.add('show');
-    $('#aiDot').className='dot off'; $('#aiBadge').textContent='AI: server band hai';
+    $('#aiDot').className='dot off'; $('#aiBadge').textContent='AI: server is down';
     return false;
   }
 }
 function renderAi(ai){
   const anyOn=(ai.providers||[]).some(p=>p.configured);
   $('#aiDot').className='dot '+(ai.enabled?'on':anyOn?'on':'off');
-  $('#aiBadge').textContent = ai.enabled ? 'AI ON · '+(ai.chain||'') : 'AI OFF · database search chalega';
+  $('#aiBadge').textContent = ai.enabled ? 'AI ON · '+(ai.chain||'') : 'AI OFF · database search will be used';
   $('#aiList').innerHTML=(ai.providers||[]).map(p=>
     `<div class="prov"><span class="dot ${p.configured?'on':''}" style="margin-top:5px"></span>
       <div><div class="n">${p.order}. ${esc(p.name)}</div>
       <div class="m">${esc(p.model)}<br>${esc(p.free_note||'')}</div></div>
-      <span class="pill ${p.configured?'ok':'warn'}">${esc(p.status_text||(p.configured?'✅ Ready':'⚠️ Band hai'))}</span></div>`).join('')
-    || '<p class="hint">AI ki jaankari nahi mili.</p>';
+      <span class="pill ${p.configured?'ok':'warn'}">${esc(p.status_text||(p.configured?'✅ Ready':'⚠️ Off'))}</span></div>`).join('')
+    || '<p class="hint">No AI information available.</p>';
 }
-$('#retryBtn').onclick=async()=>{ if(await refreshStatus()) toast('Server se connect ho gaya ✅'); };
+$('#retryBtn').onclick=async()=>{ if(await refreshStatus()) toast('Connected to the server ✅'); };
 $('#testAiBtn').onclick=async(e)=>{
-  const btn=e.currentTarget, out=$('#aiTestResult'); btn.disabled=true; btn.textContent='⏳ Test ho raha hai…';
-  out.innerHTML='<p class="hint">Har provider ko ek chhota test call ja raha hai…</p>';
+  const btn=e.currentTarget, out=$('#aiTestResult'); btn.disabled=true; btn.textContent='⏳ Testing…';
+  out.innerHTML='<p class="hint">Sending a small test call to each provider…</p>';
   try{
     const r=await api('/api/ai/test',{method:'POST'});
     out.innerHTML=(r.results||[]).map(x=>{
       if(!x.configured) return `<div class="result" style="background:rgba(251,191,36,.08);border:1px solid rgba(251,191,36,.3);color:#fde68a">⚠️ ${esc(x.provider)} — ${esc(x.skipped||'skip')}</div>`;
-      return `<div class="result ${x.ok?'ok':'bad'}">${x.ok?'✅':'❌'} ${esc(x.provider)} (${esc(x.model)}) — ${x.ok?('chal rahi hai · '+fmtN(x.ms)+' ms'):esc(x.error||'fail')}</div>`;
-    }).join('')||'<p class="hint">Kuch test nahi hua.</p>';
+      return `<div class="result ${x.ok?'ok':'bad'}">${x.ok?'✅':'❌'} ${esc(x.provider)} (${esc(x.model)}) — ${x.ok?('working · '+fmtN(x.ms)+' ms'):esc(x.error||'fail')}</div>`;
+    }).join('')||'<p class="hint">Nothing was tested.</p>';
   }catch(err){ out.innerHTML=`<div class="result bad">❌ Test fail: ${esc(err.message)}</div>`; }
-  btn.disabled=false; btn.textContent='🔑 Sab AI Test Karo';
+  btn.disabled=false; btn.textContent='🔑 Test All AI';
 };
 
 /* ---------- Documents ---------- */
-const SUGGESTIONS=['UPI QR kaise banta hai?','GTM Command Center ke steps kya hain?','WhatsApp Cloud API setup kaise karein?'];
+const SUGGESTIONS=['How is a UPI QR created?','What are the GTM Command Center steps?','How do I set up the WhatsApp Cloud API?'];
 function docCard(d){
   const el=document.createElement('div'); el.className='doc';
   el.innerHTML=`<div class="nm">📄 <span></span></div>
-    <div class="meta">✅ Database mein saved · ${fmtN(d.pages)} pages · ${fmtN(d.chars)} characters · ${fmtN(d.chunks)} hisse
+    <div class="meta">✅ Saved in database · ${fmtN(d.pages)} pages · ${fmtN(d.chars)} characters · ${fmtN(d.chunks)} chunks
     ${d.tables_found?` · 📊 ${fmtN(d.tables_found)} tables`:''}${d.ocr_pages?` · 🔍 ${fmtN(d.ocr_pages)} OCR pages`:''}<br>🕐 ${esc(fmtDate(d.created_at))}</div>
     <div class="row">
-      <button class="ghost mini" data-act="view">📖 Data dekho</button>
-      <button class="ghost mini" data-act="ask" title="Sirf isi PDF mein sawaal dhundho">💬 Isi se puchho</button>
-      <button class="danger mini" data-act="del" style="margin-left:auto" title="PDF delete karo">🗑</button>
+      <button class="ghost mini" data-act="view">📖 View data</button>
+      <button class="ghost mini" data-act="ask" title="Search only this PDF">💬 Ask this PDF</button>
+      <button class="danger mini" data-act="del" style="margin-left:auto" title="Delete this PDF">🗑 Delete</button>
     </div>
     <div class="exp"><span>⬇ Download:</span>
       <button class="ghost mini" data-act="txt">TXT</button>
       <button class="ghost mini" data-act="csv">CSV</button>
       <button class="ghost mini" data-act="json">JSON</button>
     </div>`;
-  el.querySelector('.nm span').textContent=d.name; // naam text ki tarah — script kabhi nahi banega
+  el.querySelector('.nm span').textContent=d.name; // name set as text — can never become a script
   el.querySelectorAll('button').forEach(b=>b.onclick=()=>docAction(d,b.dataset.act,el));
   return el;
 }
@@ -348,13 +353,14 @@ async function docAction(d,act){
   if(act==='txt'||act==='csv'||act==='json'){
     const a=document.createElement('a'); a.href=`/api/docs/${encodeURIComponent(d.id)}/export?format=${act}`; a.download=''; a.click(); return;
   }
-  if(act==='ask'){ $('#docFilter').value=d.id; $('#q').focus(); toast(`Ab sawaal sirf "${d.name}" mein dhundhega`); return; }
+  if(act==='ask'){ $('#docFilter').value=d.id; $('#q').focus(); toast(`Questions will now search only "${d.name}"`); return; }
   if(act==='del'){
-    $('#confirmMsg').textContent=`"${d.name}" database se hat jayegi. Uske pages aur search data bhi delete ho jayega.`;
+    $('#confirmTitle').textContent='🗑 Delete this PDF?';
+    $('#confirmMsg').textContent=`"${d.name}" will be removed from the database, along with its pages and search data.`;
     const dlg=$('#confirmDlg'); dlg.showModal();
     $('#confirmYes').onclick=async()=>{ dlg.close();
       try{ await api(`/api/docs/${encodeURIComponent(d.id)}`,{method:'DELETE'});
-        toast('PDF hata di 🗑'); refreshDocs(); refreshStatus();
+        toast('PDF deleted 🗑'); refreshDocs(); refreshStatus();
       }catch(e){ toast('Delete fail: '+e.message,'err'); } };
     $('#confirmNo').onclick=()=>dlg.close();
   }
@@ -363,30 +369,48 @@ async function viewText(d){
   try{
     const data=await api(`/api/docs/${encodeURIComponent(d.id)}/text`);
     $('#dlgTitle').textContent='📖 '+data.name;
-    $('#dlgBody').textContent=data.pages.map(p=>`\n===== Page ${p.page}  [${p.method}] =====\n`+(p.text||'(is page par text nahi mila)')).join('\n');
+    $('#dlgBody').textContent=data.pages.map(p=>`\n===== Page ${p.page}  [${p.method}] =====\n`+(p.text||'(no text found on this page)')).join('\n');
     lastAnswerText=$('#dlgBody').textContent;
     $('#textDlg').showModal();
   }catch(e){ toast(e.message,'err'); }
 }
-$('#copyTextBtn').onclick=async()=>{ try{ await navigator.clipboard.writeText(lastAnswerText); toast('Text copy ho gaya 📋'); }catch{ toast('Copy nahi hua — browser permission dekho','err'); } };
+$('#delAllBtn').onclick=()=>{
+  const docs=[...docsCache];
+  if(!docs.length) return;
+  $('#confirmTitle').textContent=`🗑 Delete all ${docs.length} PDFs?`;
+  $('#confirmMsg').textContent='Every PDF will be removed from the database, along with its pages and search data. This cannot be undone.';
+  const dlg=$('#confirmDlg'); dlg.showModal();
+  $('#confirmYes').onclick=async()=>{ dlg.close();
+    let failed=0;
+    for(const d of docs){
+      try{ await api(`/api/docs/${encodeURIComponent(d.id)}`,{method:'DELETE'}); }catch{ failed++; }
+    }
+    if(failed) toast(`${failed} PDF(s) could not be deleted`,'err');
+    else toast(`All ${docs.length} PDFs deleted 🗑`);
+    $('#docFilter').value=''; refreshDocs(); refreshStatus();
+  };
+  $('#confirmNo').onclick=()=>dlg.close();
+};
+$('#copyTextBtn').onclick=async()=>{ try{ await navigator.clipboard.writeText(lastAnswerText); toast('Text copied 📋'); }catch{ toast('Copy failed — check browser permissions','err'); } };
 $('#closeTextBtn').onclick=()=>$('#textDlg').close();
 
 async function refreshDocs(){
   try{ docsCache=await api('/api/docs'); }catch{ docsCache=[]; }
   renderDocs();
-  if(!chatDirty) welcome(); // welcome sandesh PDF ki ginti ke hisaab se
+  if(!chatDirty) welcome(); // welcome message depends on the PDF count
 }
 function renderDocs(){
   const q=($('#docSearch').value||'').toLowerCase();
   const box=$('#docs');
   const list=docsCache.filter(d=>!q||d.name.toLowerCase().includes(q));
   box.innerHTML='';
-  if(!docsCache.length) box.innerHTML='<div class="empty">Abhi koi PDF nahi hai.<br>Upar se pehli PDF upload karo 👆</div>';
-  else if(!list.length) box.innerHTML='<div class="empty">Is naam ki PDF nahi mili.</div>';
+  $('#delAllBtn').hidden=docsCache.length<2;
+  if(!docsCache.length) box.innerHTML='<div class="empty">No PDFs yet.<br>Upload your first PDF above 👆</div>';
+  else if(!list.length) box.innerHTML='<div class="empty">No PDF with that name.</div>';
   else list.forEach(d=>box.appendChild(docCard(d)));
   const sel=$('#docFilter'), cur=sel.value;
   sel.innerHTML='';
-  const all=document.createElement('option'); all.value=''; all.textContent='🌐 Sabhi PDFs mein dhundho'; sel.appendChild(all);
+  const all=document.createElement('option'); all.value=''; all.textContent='🌐 Search all PDFs'; sel.appendChild(all);
   docsCache.forEach(d=>{ const o=document.createElement('option'); o.value=d.id; o.textContent=d.name; sel.appendChild(o); });
   sel.value=docsCache.some(d=>d.id===cur)?cur:'';
   renderChips();
@@ -402,31 +426,62 @@ drop.onkeydown=e=>{ if((e.key==='Enter'||e.key===' ')&&!drop.classList.contains(
 drop.addEventListener('drop',e=>uploadFiles(e.dataTransfer.files));
 fileInp.onchange=()=>{ uploadFiles(fileInp.files); fileInp.value=''; };
 
+function fmtDur(sec){
+  sec=Math.max(0,Math.round(sec));
+  const h=Math.floor(sec/3600), m=Math.floor(sec%3600/60), s=sec%60;
+  return h ? `${h}h ${String(m).padStart(2,'0')}m` : `${m}:${String(s).padStart(2,'0')}`;
+}
+let bgShown=false; // showing a server-side job this tab did not start (e.g. after a refresh)
+async function pollProgress(){
+  let items=[];
+  try{ items=(await api('/api/progress')).items||[]; }catch{ return; }
+  let live=$('#upLive');
+  if(!live){
+    if(!items.length){
+      if(bgShown){ bgShown=false; $('#upStatus').innerHTML=''; $('#upProg').classList.remove('show','det');
+        $('#upProg i').style.width=''; refreshDocs(); refreshStatus(); toast('PDF processing finished ✅'); }
+      return;
+    }
+    $('#upStatus').innerHTML='<div class="result" style="background:rgba(91,140,255,.08);border:1px solid var(--line)">⏳ A PDF is being processed on the server…<div id="upLive"></div></div>';
+    $('#upProg').classList.add('show'); bgShown=true; live=$('#upLive');
+  }
+  const p=items[0];
+  if(!p||!p.total){ live.innerHTML=p?`<div class="hint">📄 ${esc(p.name)} (file ${p.file}/${p.files}) — opening PDF…</div>`:''; return; }
+  const pct=Math.floor(p.done/p.total*100);
+  const elapsed=(Date.now()-new Date(p.started_at))/1000;
+  const eta=p.done ? elapsed/p.done*(p.total-p.done) : 0;
+  live.innerHTML=`<div class="hint" style="margin-top:6px">📄 <b>${esc(p.name)}</b> (file ${p.file}/${p.files})<br>`+
+    `Page <b>${fmtN(p.done)}</b> / ${fmtN(p.total)} · ${pct}%${p.done?` · about ${fmtDur(eta)} left`:''}</div>`;
+  $('#upProg').classList.add('det'); $('#upProg i').style.width=pct+'%';
+}
 async function uploadFiles(files){
   const list=[...files].filter(f=>/\.pdf$/i.test(f.name)||f.type==='application/pdf');
   const st=$('#upStatus');
-  if(!list.length){ toast('Sirf PDF files chalengi','err'); return; }
-  if(list.length!==files.length) toast('Kuch files PDF nahi thi, wo chhod di');
+  if(!list.length){ toast('Only PDF files are supported','err'); return; }
+  if(list.length>20){ toast(`You selected ${list.length} PDFs — upload at most 20 at a time`,'err'); return; }
+  if(list.length!==files.length) toast('Some files were not PDFs and were skipped');
   drop.classList.add('busy'); $('#upProg').classList.add('show');
   const t0=Date.now();
-  st.innerHTML=`<div class="result" style="background:rgba(91,140,255,.08);border:1px solid var(--line)">⏳ ${list.length} file(s) process ho rahi hain: ${list.map(f=>esc(f.name)).join(', ')}<br><span class="hint">OCR wali badi PDF mein 1–2 minute lag sakta hai… (<span id="upSecs">0</span>s)</span></div>`;
-  const tick=setInterval(()=>{ const s=$('#upSecs'); if(s) s.textContent=Math.round((Date.now()-t0)/1000); },500);
+  st.innerHTML=`<div class="result" style="background:rgba(91,140,255,.08);border:1px solid var(--line)">⏳ Processing ${list.length} file(s): ${list.map(f=>esc(f.name)).join(', ')}<br><span class="hint">Scanned PDFs need OCR on every page (~5 s/page) — a 1000-page manual can take over an hour. You can keep using the app meanwhile. (<span id="upSecs">0:00</span>)</span><div id="upLive"></div></div>`;
+  const tick=setInterval(()=>{ const s=$('#upSecs'); if(s) s.textContent=fmtDur((Date.now()-t0)/1000); },500);
+  bgShown=false;
   const fd=new FormData();
   list.forEach(f=>fd.append('files',f));
   fd.append('ocr_mode',$('#ocrAlways').checked?'always':'auto');
   try{
     const r=await api('/api/upload',{method:'POST',body:fd});
-    st.innerHTML=(r.added||[]).map(d=>`<div class="result ok">✅ <b>${esc(d.name)}</b> — ${fmtN(d.pages)} pages, ${fmtN(d.chunks)} hisse<br>🗄️ Database mein save ho gaya</div>`).join('')
+    st.innerHTML=(r.added||[]).map(d=>`<div class="result ok">✅ <b>${esc(d.name)}</b> — ${fmtN(d.pages)} pages, ${fmtN(d.chunks)} chunks<br>🗄️ Saved to database</div>`).join('')
       +(r.warnings||[]).map(w=>`<div class="result" style="background:rgba(251,191,36,.08);border:1px solid rgba(251,191,36,.35);color:#fde68a">⚠️ <b>${esc(w.name)}</b>: ${esc(w.warning)}</div>`).join('')
       +(r.errors||[]).map(e=>`<div class="result bad">❌ <b>${esc(e.name)}</b>: ${esc(e.error)}</div>`).join('')
-      ||'<div class="result bad">❌ Kuch bhi add nahi hua</div>';
-    if(r.added?.length) toast(`${r.added.length} PDF database mein save ho gayi 🎉`);
-    if(r.errors?.length) toast(`${r.errors.length} file fail hui`, 'err');
+      ||'<div class="result bad">❌ Nothing was added</div>';
+    if(r.added?.length) toast(`${r.added.length} PDF(s) saved to database 🎉`);
+    if(r.errors?.length) toast(`${r.errors.length} file(s) failed`, 'err');
   }catch(e){
     st.innerHTML=`<div class="result bad">❌ Upload fail: ${esc(e.message)}</div>`;
     toast('Upload fail: '+e.message,'err');
   }finally{
-    clearInterval(tick); drop.classList.remove('busy'); $('#upProg').classList.remove('show');
+    clearInterval(tick); drop.classList.remove('busy');
+    $('#upProg').classList.remove('show','det'); $('#upProg i').style.width='';
     refreshDocs(); refreshStatus();
   }
 }
@@ -438,22 +493,22 @@ function bubble(text,who){
   const el=document.createElement('div'); el.className='msg '+who; el.textContent=text;
   msgs.appendChild(el); scrollChat(); return el;
 }
-let chatDirty=false; // user ne pehla sawaal puchha ya nahi
+let chatDirty=false; // whether the user has asked their first question
 function welcome(){
   msgs.innerHTML='';
   const n=docsCache.length;
   if(!n){
-    bubble('Namaste! 👋 Pehle upar se PDF upload karo, phir yahan sawaal puchho.\nJawab PDF ke pages se milega — page number ke saath, taaki tum khud check kar sako.','bot');
+    bubble('Hello! 👋 Upload a PDF above first, then ask your question here.\nAnswers come from the PDF pages — with page numbers, so you can verify them yourself.','bot');
     const steps=document.createElement('div');
     steps.className='steps';
     steps.innerHTML=
-      '<div class="step"><span class="n">1</span><div><b>PDF upload karo</b> — upar wale box mein file drag karo ya click karke choose karo</div></div>'+
-      '<div class="step"><span class="n">2</span><div><b>Database mein save hoga</b> — text/OCR se pages apne aap bankar ready ho jayenge</div></div>'+
-      '<div class="step"><span class="n">3</span><div><b>Yahan sawaal puchho</b> — jawab page number ke saath milega, sources kholkar khud check kar sakte ho</div></div>';
+      '<div class="step"><span class="n">1</span><div><b>Upload a PDF</b> — drag a file into the box above or click to choose one</div></div>'+
+      '<div class="step"><span class="n">2</span><div><b>It gets saved to the database</b> — pages are prepared automatically via text/OCR</div></div>'+
+      '<div class="step"><span class="n">3</span><div><b>Ask questions here</b> — answers include page numbers; open the sources to verify</div></div>';
     msgs.appendChild(steps);
   }else{
-    const el=bubble(`Namaste! 👋 ${fmtN(n)} PDF database mein ready ${n===1?'hai':'hain'}.\nApna sawaal neeche likho — jawab PDF ke pages se milega, page number ke saath.`,'bot');
-    el.insertAdjacentHTML('beforeend','<div class="mode">💡 Neeche diye example sawaal par click karke try karo</div>');
+    const el=bubble(`Hello! 👋 ${fmtN(n)} PDF${n===1?' is':'s are'} ready in the database.\nType your question below — answers come from the PDF pages, with page numbers.`,'bot');
+    el.insertAdjacentHTML('beforeend','<div class="mode">💡 Click an example question below to try it</div>');
   }
   scrollChat();
 }
@@ -472,12 +527,12 @@ let msgSeq=0; const answerStore=new Map();
 async function ask(){
   const inp=$('#q'), q=inp.value.trim();
   if(!q) return;
-  if(!docsCache.length){ toast('Pehle ek PDF upload karo 👆','err'); document.getElementById('drop').scrollIntoView({behavior:'smooth',block:'center'}); return; }
+  if(!docsCache.length){ toast('Upload a PDF first 👆','err'); document.getElementById('drop').scrollIntoView({behavior:'smooth',block:'center'}); return; }
   chatDirty=true; msgs.querySelector('.steps')?.remove();
   bubble(q,'user'); inp.value=''; inp.style.height='auto';
   const btn=$('#askBtn'); btn.disabled=true; btn.textContent='…';
   const typing=document.createElement('div'); typing.className='msg bot';
-  typing.innerHTML='<span class="typing"><i></i><i></i><i></i></span> <span class="mode">Jawab dhoondh raha hoon… <span class="sec">0</span>s</span>';
+  typing.innerHTML='<span class="typing"><i></i><i></i><i></i></span> <span class="mode">Finding the answer… <span class="sec">0</span>s</span>';
   msgs.appendChild(typing); scrollChat();
   const t0=Date.now();
   const tick=setInterval(()=>{ const s=typing.querySelector('.sec'); if(s) s.textContent=Math.round((Date.now()-t0)/1000); },500);
@@ -486,29 +541,29 @@ async function ask(){
       body:JSON.stringify({question:q,doc_id:$('#docFilter').value||null})});
     typing.remove();
     const id=++msgSeq; answerStore.set(id,r.answer||'');
-    const el=bubble(r.answer||'(khali jawab)','bot');
+    const el=bubble(r.answer||'(empty answer)','bot');
     let foot='';
     if(r.mode==='ai'){
       const failed=(r.attempts||[]).filter(a=>!a.ok);
-      foot=`<span class="mode">🤖 AI jawab — ${esc(r.provider||'')} (${esc(r.model||'')})${failed.length?` · ↪ pehle fail: ${failed.map(a=>esc(a.provider)).join(', ')}`:''}</span>`;
+      foot=`<span class="mode">🤖 AI answer — ${esc(r.provider||'')} (${esc(r.model||'')})${failed.length?` · ↪ failed first: ${failed.map(a=>esc(a.provider)).join(', ')}`:''}</span>`;
     }else{
       const tried=(r.attempts||[]).filter(a=>!a.ok);
-      foot=`<span class="mode">🗄️ Database search ka jawab (PDF ke exact hisse)${tried.length?` · AI try hua par fail: ${tried.map(a=>esc(a.provider)).join(', ')}`:''}</span>`;
+      foot=`<span class="mode">🗄️ Database search answer (exact PDF passages)${tried.length?` · AI tried but failed: ${tried.map(a=>esc(a.provider)).join(', ')}`:''}</span>`;
     }
     foot+=`<button class="ghost copyBtn" data-copy="${id}">📋 Copy</button>`;
     let src='';
     if(r.sources?.length){
-      src='<details class="sources"><summary>📎 Sources ('+r.sources.length+') — kis page se aaya</summary>'+
+      src='<details class="sources"><summary>📎 Sources ('+r.sources.length+') — which page it came from</summary>'+
         r.sources.map(s=>`<div class="src"><span class="pg">${esc(s.doc_name)} · page ${s.page}</span> · match ${Math.round((s.score||0)*100)}% · [${esc(s.method)}]<br>${esc(s.passage)}</div>`).join('')+'</details>';
     }
     el.insertAdjacentHTML('beforeend', src+`<div class="foot">${foot}</div>`);
-    el.querySelector('[data-copy]').onclick=async()=>{ try{ await navigator.clipboard.writeText(answerStore.get(id)||''); toast('Jawab copy ho gaya 📋'); }catch{ toast('Copy nahi hua','err'); } };
+    el.querySelector('[data-copy]').onclick=async()=>{ try{ await navigator.clipboard.writeText(answerStore.get(id)||''); toast('Answer copied 📋'); }catch{ toast('Copy failed','err'); } };
   }catch(e){
     typing.remove();
-    const el=bubble('⚠️ Kuch gadbad ho gayi: '+(e.message||e)+'\nDobara try karo.','bot');
+    const el=bubble('⚠️ Something went wrong: '+(e.message||e)+'\nPlease try again.','bot');
     el.style.borderColor='rgba(248,113,113,.5)';
   }finally{
-    clearInterval(tick); btn.disabled=false; btn.textContent='Bhejo ➤'; inp.focus(); scrollChat();
+    clearInterval(tick); btn.disabled=false; btn.textContent='Send ➤'; inp.focus(); scrollChat();
   }
 }
 $('#askBtn').onclick=ask;
@@ -522,10 +577,11 @@ const qBox=$('#q');
 qBox.addEventListener('keydown',e=>{ if(e.key==='Enter'&&!e.shiftKey){ e.preventDefault(); ask(); } });
 qBox.addEventListener('input',()=>{ qBox.style.height='auto'; qBox.style.height=Math.min(qBox.scrollHeight,110)+'px'; });
 
-/* ---------- Shuruaat ---------- */
+/* ---------- Startup ---------- */
 welcome();
 (async()=>{ await Promise.allSettled([refreshStatus(), refreshDocs()]); })();
 setInterval(()=>{ if(!document.hidden) refreshStatus(); }, 45000);
+pollProgress(); setInterval(()=>{ if(!document.hidden) pollProgress(); }, 2500);
 </script>
 </body>
 </html>

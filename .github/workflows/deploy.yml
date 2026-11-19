@@ -1,35 +1,35 @@
 # ============================================================
-#  AUTO-DEPLOY — GitHub par push karo, website khud update!
+#  AUTO-DEPLOY — push to GitHub and the website updates itself!
 # ------------------------------------------------------------
-#  Kaise kaam karta hai:
-#    master branch par `git push`  ->  ye workflow chalega
-#    -> GitHub ka runner SSH se tumhare EC2 server mein ghusega
-#    -> server par `git pull` + `docker compose up -d --build`
-#    -> aakhir mein /api/health check — fail hua to Actions
-#       tab mein laal nishaan dikhega (site purani hi chalti rahegi
-#       jab tak naya container up na ho).
+#  How it works:
+#    `git push` to the master branch  ->  this workflow runs
+#    -> the GitHub runner SSHes into your EC2 server
+#    -> on the server: `git pull` + `docker compose up -d --build`
+#    -> finally an /api/health check — if it fails, the Actions
+#       tab shows a red mark (the old site keeps running
+#       until the new container is up).
 #
-#  EK BAAR KI SETTING (GitHub repo -> Settings -> Secrets and
+#  ONE-TIME SETUP (GitHub repo -> Settings -> Secrets and
 #  variables -> Actions -> New repository secret):
-#    EC2_HOST     = server ka public IP      (jaise 13.234.xx.xx)
+#    EC2_HOST     = the server's public IP   (e.g. 13.234.xx.xx)
 #    EC2_USER     = ubuntu
-#    EC2_SSH_KEY  = tumhari .pem file ka POORA text
-#                   (-----BEGIN ... KEY----- se END tak)
+#    EC2_SSH_KEY  = the FULL text of your .pem file
+#                   (from -----BEGIN ... KEY----- to END)
 #
-#  Server par pehli baar sirf itna chahiye (AWS_DEPLOY.md me hai):
-#    Docker install + git clone + .env file bana kar keys bharna.
-#  .env aur data/ server par hi rahte hain — git pull unhe
-#  kabhi haath nahi lagata, isliye har deploy par keys/data safe.
+#  First time on the server you only need (see AWS_DEPLOY.md):
+#    install Docker + git clone + create the .env file with keys.
+#  .env and data/ stay on the server — git pull never
+#  touches them, so keys/data are safe on every deploy.
 # ============================================================
 
 name: Deploy to AWS EC2
 
 on:
   push:
-    branches: [master]        # sirf master push = live update
-  workflow_dispatch:          # Actions tab se haath se bhi chala sakte ho
+    branches: [master]        # only a push to master = live update
+  workflow_dispatch:          # can also be run manually from the Actions tab
 
-# Ek time par ek hi deploy — dusra push aaye to pehle wala khatm ho
+# One deploy at a time — a second push waits for the first to finish
 concurrency:
   group: ec2-deploy
   cancel-in-progress: false
@@ -39,44 +39,44 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
-      - name: SSH key rakho
+      - name: Set up SSH key
         run: |
           mkdir -p ~/.ssh
           echo "${{ secrets.EC2_SSH_KEY }}" > ~/.ssh/deploy_key
           chmod 600 ~/.ssh/deploy_key
           ssh-keyscan -H "${{ secrets.EC2_HOST }}" >> ~/.ssh/known_hosts
 
-      - name: Server par update karo (git pull + docker compose)
+      - name: Update the server (git pull + docker compose)
         run: |
           ssh -i ~/.ssh/deploy_key \
             "${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }}" << 'EOF'
             set -e
             cd ~/ocr_pdf
-            echo "== purana version =="
+            echo "== old version =="
             git log --oneline -1
             git fetch origin
             git checkout master
             git pull --ff-only
-            echo "== naya version =="
+            echo "== new version =="
             git log --oneline -1
             docker compose up -d --build
             docker compose ps
           EOF
 
-      - name: Health check (site sach me chali ya nahi)
+      - name: Health check (is the site really up?)
         run: |
           ssh -i ~/.ssh/deploy_key \
             "${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }}" << 'EOF'
             for i in 1 2 3 4 5 6 7 8 9 10; do
               if curl -fsS http://127.0.0.1:8000/api/health; then
                 echo ""
-                echo "DEPLOY OK — site live hai"
+                echo "DEPLOY OK — site is live"
                 exit 0
               fi
-              echo "server garam ho raha hai... ($i/10)"
+              echo "server is warming up... ($i/10)"
               sleep 6
             done
-            echo "HEALTH CHECK FAIL — docker compose logs dekho"
+            echo "HEALTH CHECK FAIL — check docker compose logs"
             docker compose logs --tail 50 || true
             exit 1
           EOF

@@ -1,28 +1,29 @@
-# PDF OCR Q&A - core (halka, offline chalta hai)
+# PDF OCR Q&A - core (lightweight, works offline)
 PyMuPDF>=1.24
 fastapi>=0.110
 uvicorn[standard]>=0.29
 python-multipart>=0.0.9
 pydantic>=2.6
 
-# OCR engine (koi EK kaafi hai) -------------------------------
-# Option A (recommended, Hindi+Hinglish ke liye best):
-#   system par Tesseract install karo, phir:
+# OCR engine (any ONE is enough) -------------------------------
+# Option A (recommended, best for Hindi+Hinglish):
+#   install Tesseract on the system, then:
 #   pip install pytesseract Pillow
-#   Windows: https://github.com/ub-mannheim/tesseract/wiki  (hin language tick karo)
+#   Windows: https://github.com/ub-mannheim/tesseract/wiki  (tick the hin language)
 #   Ubuntu:  sudo apt install tesseract-ocr tesseract-ocr-hin
 #
-# Option B (sirf pip, English strong / Hindi weak):
-# DHYAAN: rapidocr apne saath GUI wala `opencv-python` bhi install karta
-# hai jo headless system par libGL error deta hai. Isiliye setup.sh /
-# setup.bat use karo — wo aakhir mein opencv ko headless se badal dete
-# hain. Haath se install karna ho to:
+# Option B (pip only, strong English / weak Hindi):
+# NOTE: rapidocr also installs the GUI `opencv-python`, which gives a libGL
+# error on headless systems. So use setup.sh / setup.bat — they replace
+# opencv with the headless build at the end. To install by hand:
 #   pip install -r requirements.txt
 #   pip uninstall -y opencv-python
 #   pip install --force-reinstall opencv-python-headless
-rapidocr-onnxruntime>=1.3
+rapidocr-onnxruntime>=1.3; python_version < "3.13"
+# 1.3+ has no build for Python 3.13 yet; 1.2.3 installs and works there
+rapidocr-onnxruntime==1.2.3; python_version >= "3.13"
 opencv-python-headless>=4.9
 Pillow>=10.0
 #
-# Option C (Devanagari achha, lekin heavy ~2GB torch):
+# Option C (good Devanagari, but heavy ~2GB torch):
 #   easyocr>=1.7
